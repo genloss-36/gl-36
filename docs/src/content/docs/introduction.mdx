@@ -24,7 +24,7 @@ GL-36 keeps only what can't be computed: **who owns a token and what they're ask
 
 A GL-36 token is not an SPL token. It has no mint account, no token account and no metadata account, so it does not appear in wallets that only list SPL tokens and it can't be passed to programs that expect one. Wallets and marketplaces read GL-36 collections with the [TypeScript SDK](/docs/client/) or the byte layout in [Collection account](/docs/collection-account/).
 
-Metadata is not stored either. A collection commits to the hash of its generator — the code that turns a token's seed into its content — and anyone can recompute every token from public data. See [Provenance and reveal](/docs/provenance/).
+Metadata is not stored either. A collection commits to the hash of its generator — the code that turns a token's seed into its content — and anyone can recompute every token from public data. See [Provenance and entropy](/docs/provenance/).
 
 <Note label="Version">
   This documentation describes layout version 1 of program <code>gl36</code> 0.1.0, deployed on Solana mainnet. Bids and offers, a mint pause and allowlists are not part of version 1.
