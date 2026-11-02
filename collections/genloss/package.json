@@ -6,7 +6,7 @@
   "description": "GENLOSS, the first collection on GL-36: generator, mint site and deployment script.",
   "scripts": {
     "predev": "node site/scripts/sync-generator.mjs",
-    "dev": "astro dev --root site",
+    "dev": "cd site && astro dev",
     "prebuild": "node site/scripts/sync-generator.mjs",
     "build": "astro build --root site",
     "preview": "astro preview --root site",
