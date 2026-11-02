@@ -1,0 +1,49 @@
+---
+title: Deployments
+description: Where the GL-36 program runs, the collections deployed on it, and what was measured there.
+---
+
+import Deployments from "../../components/Deployments.astro";
+import Note from "../../components/Note.astro";
+import { GENLOSS_URL } from "../../lib/config";
+
+GL-36 is deployed on Solana **devnet**. It is not on mainnet yet; this page will list the mainnet program when it is.
+
+<Deployments />
+
+Genesis is the public collection of **GENLOSS**, the first project built on GL-36; it is minted at <a href={GENLOSS_URL}>genloss.gl36.org</a>. Showcase is a fully minted and revealed devnet demo with live listings; it will not exist on mainnet.
+
+## Build
+
+| Property | Value |
+| --- | --- |
+| Crate | `gl36` 0.1.0 |
+| Framework | Pinocchio 0.12, `no_std`, no allocator |
+| Target | sBPF v3 |
+| Binary | 19,624 bytes |
+| Toolchain | Rust 1.89+, Agave CLI 4.x |
+
+The binary is small enough that its own rent — refundable if the program is closed — is about 0.1 SOL at today's rate.
+
+## Measured on devnet
+
+A full cycle on a 5,000-token collection and a 3-token collection that sold out, in 15 transactions:
+
+| Step | Compute units |
+| --- | ---: |
+| `init`, supply 5,000 | 3,253 |
+| `mint` × 1 | 2,971 |
+| `mint` × 10 | 3,189 |
+| `mint` × 3 | 3,064 |
+| `list` | 452 |
+| `buy` | 2,901 |
+| `transfer` | 374 |
+| `list` + delist | 863 |
+| `reveal`, closes the mint | 457 |
+| `withdraw_excess` | 401 |
+
+Minting one token at a price of 0.01 SOL cost the minter 0.010188 SOL in total: the price, the rent for 36 bytes and the network fee. All 15 transactions together paid 0.000075 SOL in network fees.
+
+<Note label="Verifying the program">
+  Build <code>program/</code> with <code>cargo build-sbf</code> and compare the hash of <code>target/deploy/gl36.so</code> with the program data on chain, for example with <code>solana-verify</code>.
+</Note>

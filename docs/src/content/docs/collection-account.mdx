@@ -1,0 +1,103 @@
+---
+title: Collection account
+description: The byte layout of a GL-36 collection — a 224-byte header followed by one 36-byte slot per minted token.
+---
+
+import HeaderMap from "../../components/HeaderMap.astro";
+import Note from "../../components/Note.astro";
+
+A collection is a single account owned by the GL-36 program. Its length is always
+
+```
+len = 224 + minted × 36
+```
+
+The first 224 bytes are the header. Slots follow without padding: slot `id` starts at byte `224 + id × 36`. The program checks this equation on every instruction and rejects an account whose length doesn't match.
+
+## Address
+
+The account is a program-derived address:
+
+```
+seeds = ["col", creator, nonce as u32 little-endian]
+```
+
+The nonce lets one creator run any number of collections from the same key. It is stored in the header and chosen at `init`.
+
+```ts
+import { findCollection } from "@gl36/sdk";
+
+const [collection, bump] = await findCollection(PROGRAM, creator.address, 1);
+```
+
+## Header
+
+All integers are little-endian. Point at a field to find it in the byte map.
+
+<HeaderMap />
+
+| Offset | Size | Field | Type | Meaning |
+| ---: | ---: | --- | --- | --- |
+| 0 | 1 | `tag` | u8 | Always `0x01`: marks a collection account. |
+| 1 | 1 | `version` | u8 | Layout version, currently `1`. |
+| 2 | 1 | `bump` | u8 | Bump of the collection PDA. |
+| 3 | 1 | `flags` | u8 | Bit 0 revealed, bit 1 closed. |
+| 4 | 2 | `max_supply` | u16 | Lowered to `minted` when `reveal` closes the mint. |
+| 6 | 2 | `minted` | u16 | Number of slots after the header. |
+| 8 | 2 | `fee_bps` | u16 | Market fee in basis points, at most 1,000 (10%). |
+| 10 | 2 | — | | Reserved, zero. |
+| 12 | 4 | `nonce` | u32 | Third PDA seed. |
+| 16 | 8 | `mint_price` | u64 | Lamports per token, paid to the creator. May be 0. |
+| 24 | 32 | `creator` | Address | Receives mint proceeds; the only signer of `reveal` and `withdraw_excess`. |
+| 56 | 32 | `treasury` | Address | Receives the market fee. |
+| 88 | 32 | `provenance` | [u8; 32] | `sha256(secret)`, fixed at `init`. |
+| 120 | 32 | `secret` | [u8; 32] | Zero until `reveal`. |
+| 152 | 32 | `entropy` | [u8; 32] | Latest `SlotHashes` entry when the mint closes. |
+| 184 | 32 | `generator_hash` | [u8; 32] | sha256 of the generator bundle. |
+| 216 | 8 | — | | Reserved, zero. |
+
+## Flags
+
+| Bit | Name | Set by | Meaning |
+| ---: | --- | --- | --- |
+| 0 | `REVEALED` | `reveal` | `secret` is public; token content can be computed. |
+| 1 | `CLOSED` | last `mint` or `reveal` | `entropy` is set; no more tokens can be minted. |
+
+A collection moves through three states, never backwards:
+
+| State | Flags | Mint | Trade |
+| --- | --- | --- | --- |
+| Open | `0b00` | yes | yes |
+| Closed | `0b10` | no | yes |
+| Revealed | `0b11` | no | yes |
+
+Selling out closes the mint and sets the entropy. `reveal` on an open collection closes it at the current supply in the same step.
+
+## Slots
+
+| Offset in slot | Size | Field | Type |
+| ---: | ---: | --- | --- |
+| 0 | 32 | `owner` | Address |
+| 32 | 4 | `price` | u32, units of 1,000 lamports, `0` = not listed |
+
+See [Slots](/docs/slots/) for what the fields allow and how ids work.
+
+<Note label="Size limits">
+  A Solana account can grow by at most 10,240 bytes per instruction and reach 10 MiB. A mint adds at most 360 bytes (10 slots). <code>max_supply</code> is a u16, so a collection holds at most 65,535 tokens: 2,359,484 bytes.
+</Note>
+
+## Decoding
+
+The client's `decodeCollection` turns the raw bytes into a typed object with every slot. It throws if the tag or version don't match:
+
+```ts
+import { decodeCollection } from "@gl36/sdk";
+
+const col = decodeCollection(bytes);
+col.minted;       // number
+col.mintPrice;    // bigint, lamports
+col.creator;      // Address
+col.slots[0];     // { id: 0, owner: Address, price: number }
+```
+
+Reading the account with `dataSlice` is also valid: the header alone is the first 224 bytes, slot `id` is 36 bytes at `224 + id × 36`.

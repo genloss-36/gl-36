@@ -1,0 +1,45 @@
+---
+import { CLUSTER, COLLECTIONS, PROGRAM_ID, explorerAddress } from "../lib/config";
+import { int } from "../lib/format";
+---
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Item</th><th>Address</th><th>Cluster</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Program <code>gl36</code> 0.1.0</td>
+      <td><a href={explorerAddress(PROGRAM_ID)} target="_blank" rel="noopener"><code>{PROGRAM_ID}</code></a></td>
+      <td>{CLUSTER}</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Collection</th><th>Address</th><th align="right">Supply</th><th><span class="sr-only">Inspect</span></th></tr>
+  </thead>
+  <tbody>
+    {
+      COLLECTIONS.map((c) => (
+        <tr>
+          <td>{c.title}</td>
+          <td>
+            <a href={explorerAddress(c.address)} target="_blank" rel="noopener">
+              <code>{c.address}</code>
+            </a>
+          </td>
+          <td align="right">{int(c.maxSupply)}</td>
+          <td>
+            <a href={`/inspector/?address=${c.address}`} aria-label={`Inspect ${c.title}`}>Inspect</a>
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+</div>

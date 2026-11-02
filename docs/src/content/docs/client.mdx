@@ -1,0 +1,184 @@
+---
+title: TypeScript SDK
+nav: TypeScript SDK
+description: The @gl36/sdk package — instruction builders, account decoding, RPC reads, logs, errors and price helpers on @solana/kit.
+---
+
+import Note from "../../components/Note.astro";
+
+`@gl36/sdk` is a small ESM package with types. Its only dependency is `@solana/kit` 8.5 or newer, declared as a peer so your app and the SDK share one copy. Builders return kit `Instruction` objects, so they compose with any kit transaction pipeline and any Wallet Standard signer. It runs on Node 20.19+ and in the browser.
+
+```bash
+npm install @gl36/sdk @solana/kit
+```
+
+<Note label="Version">
+  0.x follows the devnet deployment. The account layout and the program address may still change before mainnet; a new layout gets a new <code>version</code> byte and a new SDK minor version.
+</Note>
+
+## Addresses
+
+| Name | Value |
+| --- | --- |
+| `PROGRAM_ID.devnet` | `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` |
+| `SYSTEM_PROGRAM` | `11111111111111111111111111111111` |
+| `SLOT_HASHES` | `SysvarS1otHashes111111111111111111111111111` |
+
+### findCollection
+
+```ts
+findCollection(programId: Address, creator: Address, nonce: number): Promise<[Address, number]>
+```
+
+Derives the collection PDA from `["col", creator, nonce as u32 LE]` and returns the address and bump. Throws a `RangeError` if the nonce isn't a u32.
+
+## Instruction builders
+
+Signers are kit `TransactionSigner`s; everything else is an `Address`. Prices are `u32` units of 1,000 lamports. Each builder checks its arguments and throws a `RangeError` for anything the program would refuse: a count outside 1–10, a fee above 1,000 bps, a supply of 0, a price outside u32, a secret that isn't 32 bytes.
+
+| Function | Arguments |
+| --- | --- |
+| `initIx` | `(programId, creator, collection, treasury, args: InitArgs)` |
+| `mintIx` | `(programId, minter, collection, creator, count)` |
+| `transferIx` | `(programId, owner, collection, newOwner, id)` |
+| `listIx` | `(programId, owner, collection, id, price)` |
+| `buyIx` | `(programId, buyer, collection, seller, treasury, id, maxPrice)` |
+| `revealIx` | `(programId, creator, collection, secret)` |
+| `withdrawExcessIx` | `(programId, creator, collection)` |
+
+```ts
+interface InitArgs {
+  nonce: number;
+  maxSupply: number;
+  feeBps: number;
+  mintPrice: bigint;
+  provenance: Uint8Array;
+  generatorHash: Uint8Array;
+}
+```
+
+`INSTRUCTION` maps each name to its tag byte, from `init: 0` to `withdrawExcess: 6`.
+
+## Reading accounts
+
+Every reader takes a kit `Rpc` and an optional `{ commitment, programId }`. With `programId` set, a read throws if the account belongs to another program.
+
+| Function | Returns |
+| --- | --- |
+| `fetchCollection(rpc, address, config?)` | `{ address, lamports, data, collection }` or `null` |
+| `fetchHeader(rpc, address, config?)` | The 224-byte header only, via `dataSlice` |
+| `fetchSlot(rpc, address, id, config?)` | One 36-byte slot via `dataSlice`, `null` if not minted |
+| `findCollections(rpc, programId, { creator? })` | Every collection of the program, headers only |
+| `getLamportsPerByte(rpc)` | The cluster's current rent rate |
+
+```ts
+const mine = await findCollections(rpc, PROGRAM_ID.devnet, { creator: me.address });
+const slot = await fetchSlot(rpc, mine[0].address, 42);
+```
+
+## Decoding
+
+These work on raw bytes, from any source.
+
+| Function | Does |
+| --- | --- |
+| `decodeCollection(data)` | Header and every slot. Throws `not a GL-36 collection account` on a wrong tag or version. |
+| `decodeHeader(data)` | Header fields only; 224 bytes are enough. |
+| `decodeSlot(bytes, id)` | One 36-byte slot. |
+| `isCollectionAccount(data)` | Tag, version and `224 + minted × 36` length all match. |
+| `collectionState(col)` | `"open"`, `"closed"` or `"revealed"`. |
+| `listedSlots(col)` | Listed slots, cheapest first. |
+| `slotsOwnedBy(col, owner)` | Slots of one owner. |
+| `accountLength(minted)`, `slotOffset(id)` | Sizes and offsets for `dataSlice` and `memcmp`. |
+| `rentExemptMinimum(dataLength, lamportsPerByte)` | Rent for an account of that size. |
+
+```ts
+interface Collection {
+  bump: number;
+  flags: number;
+  maxSupply: number;
+  minted: number;
+  feeBps: number;
+  nonce: number;
+  mintPrice: bigint;
+  creator: Address;
+  treasury: Address;
+  provenance: Uint8Array;
+  secret: Uint8Array;
+  entropy: Uint8Array;
+  generatorHash: Uint8Array;
+  slots: Slot[];
+}
+
+interface Slot {
+  id: number;
+  owner: Address;
+  price: number;
+}
+```
+
+`HEADER_OFFSET` and `SLOT_OFFSET` give the byte offset of every field, for `memcmp` filters and partial reads.
+
+## Logs and errors
+
+```ts
+parseLogs(logs: readonly string[], programId: Address): Gl36Event[]
+```
+
+Turns a transaction's log messages into events: `init`, `mint`, `transfer`, `list`, `buy`, `reveal`, `withdraw`. Only lines written by the given program count, so a CPI or another program can't inject events. See [Logs](/docs/logs/).
+
+```ts
+parseProgramError(error: unknown, { programId? }): { code, name, program?, instructionIndex? } | null
+```
+
+Finds the custom error in a kit `SolanaError`, its cause chain, simulation logs or a plain message. With `programId`, an error raised by another program — the System Program's insufficient funds is also `0x1` — comes back with `name: undefined` and the program that raised it, so it isn't mistaken for `SoldOut`. `ERR` and `errorName(code)` map codes and names. See [Errors](/docs/errors/).
+
+## Prices
+
+| Function | Example |
+| --- | --- |
+| `solToPrice(sol)` | `solToPrice("0.25")` → `250_000` |
+| `priceToSol(price)` | `priceToSol(250_000)` → `"0.25"` |
+| `priceToLamports(price)` | `priceToLamports(250_000)` → `250_000_000n` |
+| `lamportsToPrice(lamports)` | Throws unless it is a whole number of units |
+
+Conversions are exact decimal arithmetic, never floating point. Anything below 0.000001 SOL or above the u32 ceiling throws a `RangeError`.
+
+## Provenance and seeds
+
+```ts
+provenanceOf(secret: Uint8Array): Promise<Uint8Array>
+tokenSeed({ domain, collection, secret, entropy, id }): Promise<Uint8Array>
+```
+
+`provenanceOf` is the `sha256(secret)` that goes into `init`. `tokenSeed` computes `sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id u16 LE)` with WebCrypto, the seed a generator turns into content. See [Provenance and reveal](/docs/provenance/).
+
+## Constants
+
+| Name | Value |
+| --- | --- |
+| `HEADER_LEN` | `224` |
+| `SLOT_LEN` | `36` |
+| `ACCOUNT_OVERHEAD` | `128` |
+| `PRICE_UNIT` | `1_000n` |
+| `MAX_PRICE` | `4_294_967_295` |
+| `MAX_SUPPLY` | `65_535` |
+| `MAX_MINT_BATCH` | `10` |
+| `MAX_FEE_BPS` | `1_000` |
+| `FLAG_REVEALED` | `1` |
+| `FLAG_CLOSED` | `2` |
+| `COLLECTION_TAG`, `LAYOUT_VERSION` | `1`, `1` |
+
+## Without the SDK
+
+The layout is small enough to decode by hand in any language. In Rust, for example:
+
+```rust
+let minted = u16::from_le_bytes([d[6], d[7]]) as usize;
+assert_eq!(d.len(), 224 + minted * 36);
+for id in 0..minted {
+    let o = 224 + id * 36;
+    let owner: [u8; 32] = d[o..o + 32].try_into().unwrap();
+    let price = u32::from_le_bytes(d[o + 32..o + 36].try_into().unwrap());
+}
+```

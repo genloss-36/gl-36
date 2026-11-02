@@ -1,0 +1,40 @@
+---
+title: Logs
+description: The one-line log each GL-36 instruction writes, and how to rebuild a collection's history from them.
+---
+
+Each successful instruction writes one `Program log:` line. Together with the signer and accounts of the transaction they describe every event in a collection's life — there is no separate event account.
+
+| Instruction | Log | Values |
+| --- | --- | --- |
+| `init` | `init <max_supply>` | Supply at creation. |
+| `mint` | `mint <first_id> <count>` | Ids `first_id` to `first_id + count − 1` went to the minter. |
+| `transfer` | `xfer <id>` | New owner is account 2 of the instruction. |
+| `list` | `list <id> <price>` | Price in units of 1,000 lamports; `0` is a delist. |
+| `buy` | `buy <id> <price>` | Buyer is account 0, seller account 2. |
+| `reveal` | `reveal` | |
+| `withdraw_excess` | `withdraw <lamports>` | Amount moved to the creator. |
+
+## Reading history
+
+```ts
+import { PROGRAM_ID, parseLogs } from "@gl36/sdk";
+
+const sigs = await rpc.getSignaturesForAddress(COLLECTION, { limit: 100 }).send();
+
+for (const { signature, err } of sigs) {
+  if (err) continue;
+  const tx = await rpc
+    .getTransaction(signature, { maxSupportedTransactionVersion: 0, encoding: "json" })
+    .send();
+  for (const event of parseLogs(tx?.meta?.logMessages ?? [], PROGRAM_ID.devnet)) {
+    if (event.type === "buy") console.log(`#${event.id} sold for ${event.price} units`);
+  }
+}
+```
+
+`parseLogs` reads only the lines GL-36 itself wrote: it tracks which program is running from the `invoke` and `success` lines, so a log from a CPI or another program in the same transaction can't pass for a GL-36 event.
+
+Logs are not part of account state: RPC nodes may prune old transactions. For permanent history, archive them as you read them, or use an RPC provider with full history.
+
+When a transaction carries several GL-36 instructions, their log lines appear in instruction order, each between the program's `invoke` and `success` lines.

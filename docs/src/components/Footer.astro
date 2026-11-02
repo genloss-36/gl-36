@@ -1,0 +1,144 @@
+---
+import Mark from "./Mark.astro";
+import { CLUSTER, PROGRAM_ID, explorerAddress, TESTNET } from "../lib/config";
+import { short } from "../lib/format";
+
+const cols = [
+  {
+    label: "Learn",
+    links: [
+      ["Introduction", "/docs/"],
+      ["Quickstart", "/docs/quickstart/"],
+      ["Collection account", "/docs/collection-account/"],
+      ["Rent and cost", "/docs/rent/"],
+    ],
+  },
+  {
+    label: "Build",
+    links: [
+      ["Launch a collection", "/docs/launch/"],
+      ["Integrate", "/docs/integrate/"],
+    ],
+  },
+  {
+    label: "Reference",
+    links: [
+      ["Instructions", "/docs/instructions/"],
+      ["Errors", "/docs/errors/"],
+      ["TypeScript SDK", "/docs/client/"],
+      ["Inspector", "/inspector/"],
+    ],
+  },
+];
+---
+
+<footer class="foot">
+  <div class="wide">
+    <div class="top">
+      <p class="title big" translate="no">GL-36</p>
+      <div class="cols">
+        {
+          cols.map((c) => (
+            <nav aria-label={c.label}>
+              <p class="label">{c.label}</p>
+              {c.links.map(([t, h]) => (
+                <a href={h}>{t}</a>
+              ))}
+            </nav>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+  <div class="base">
+    <div class="wide row">
+      <span class="brand"><Mark size={16} /><span><span translate="no">GL-36</span>, an NFT standard for Solana</span></span>
+      <a class="prog" href={explorerAddress(PROGRAM_ID)} rel="noopener" target="_blank">
+        Program on {TESTNET ? CLUSTER : "mainnet"}: <span class="mono" translate="no">{short(PROGRAM_ID, 6)}</span>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    background: var(--inv-bg);
+    color: var(--inv-fg);
+    margin-top: 160px;
+  }
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
+    padding: 96px 0 120px;
+    align-items: start;
+  }
+  .big {
+    font-size: clamp(64px, 12vw, 200px);
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(140px, auto));
+    gap: 48px;
+  }
+  .cols nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+  }
+  .cols a {
+    padding-block: 3px;
+  }
+  .label {
+    margin: 0 0 6px;
+    color: var(--inv-fg-2);
+  }
+  .cols a {
+    transition: opacity 0.2s var(--ease);
+  }
+  .cols a:hover {
+    opacity: 0.6;
+  }
+  .base {
+    border-top: 1px solid var(--inv-line);
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    min-height: 52px;
+    font-size: 14px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .prog {
+    font-size: 13px;
+    color: var(--inv-fg-2);
+  }
+  .prog:hover {
+    color: var(--inv-fg);
+  }
+  @media (max-width: 900px) {
+    .top {
+      grid-template-columns: 1fr;
+      padding: 64px 0 72px;
+    }
+  }
+  @media (max-width: 560px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+    .row {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding-block: 14px;
+      gap: 6px;
+    }
+  }
+</style>

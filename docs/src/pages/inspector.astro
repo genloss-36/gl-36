@@ -1,0 +1,571 @@
+---
+import Base from "../layouts/Base.astro";
+import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
+---
+
+<Base title="Inspector" description="Decode any GL-36 collection account: header, byte map and every slot, read live with one RPC call." current="inspector">
+  <main id="main" class="wide insp">
+    <header class="head">
+      <h1 class="title">Inspector</h1>
+      <p class="lead">Paste a collection address. One <code>getAccountInfo</code>, decoded in your browser.</p>
+    </header>
+
+    <form class="query" data-form>
+      <label class="sr-only" for="address">Collection address</label>
+      <input id="address" name="address" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Collection address, e.g. GehEdxo8dmv24…" value={FEATURED?.address} required aria-describedby="status" />
+      <button class="btn" type="submit" data-submit>Inspect</button>
+    </form>
+    <div class="known">
+      <span class="label">On {CLUSTER}:</span>
+      {COLLECTIONS.map((c) => <button type="button" class="chip press" data-pick={c.address}>{c.title}</button>)}
+      <details class="rpc">
+        <summary>RPC</summary>
+        <form data-rpc>
+          <label class="sr-only" for="rpc">RPC endpoint</label>
+          <input id="rpc" name="rpc" type="url" inputmode="url" class="mono" autocomplete="off" placeholder="https://…" spellcheck="false" />
+          <button class="btn ghost" type="submit">Save</button>
+        </form>
+      </details>
+    </div>
+
+    <p class="status" id="status" data-status role="status"></p>
+
+    <section class="result" data-result hidden>
+      <div class="summary" data-summary></div>
+
+      <div class="cols">
+        <section class="panel" aria-labelledby="h-header">
+          <h2 id="h-header">Header</h2>
+          <dl class="kv" data-kv></dl>
+        </section>
+        <section class="panel" aria-labelledby="h-bytes">
+          <div class="panel-head">
+            <h2 id="h-bytes">Bytes</h2>
+            <p class="hover" data-hover>Point at a byte to decode it.</p>
+          </div>
+          <div class="map"><canvas aria-hidden="true"></canvas></div>
+          <p class="map-note">Header in the first seven rows, then one row per token: 32 bytes of owner, 4 of price. Dot size is the byte value.</p>
+        </section>
+      </div>
+
+      <section class="panel slots" aria-labelledby="h-slots">
+        <div class="panel-head">
+          <h2 id="h-slots">Slots</h2>
+          <div class="seg" role="group" aria-label="Filter slots">
+            <span class="thumb" aria-hidden="true"></span>
+            <button class="press" type="button" aria-pressed="true" data-filter="all">All</button>
+            <button class="press" type="button" aria-pressed="false" data-filter="listed">Listed</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th align="right">Id</th><th>Owner</th><th align="right">Price</th><th align="right">Offset</th></tr>
+          </thead>
+          <tbody data-rows></tbody>
+        </table>
+        <button class="btn ghost more" type="button" data-more hidden>Show more</button>
+      </section>
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { FLAG_CLOSED, FLAG_REVEALED, PRICE_UNIT, type Collection } from "@gl36/sdk";
+  import { ByteField } from "../lib/bytefield";
+  import { fetchCollection, lamportsPerByte, rpcUrl, setRpcUrl, type Account } from "../lib/chain";
+  import { describe } from "../lib/describe";
+  import { explorerAddress } from "../lib/config";
+  import { hex, int, isZero, pad, sol } from "../lib/format";
+
+  const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!;
+  const form = $<HTMLFormElement>("[data-form]");
+  const input = $<HTMLInputElement>("#address");
+  const status = $("[data-status]");
+  const result = $("[data-result]");
+  const hover = $("[data-hover]");
+  const PAGE = 100;
+  let acc: Account | null = null;
+  let filter: "all" | "listed" = "all";
+  let shown = PAGE;
+
+  const field = new ByteField($<HTMLCanvasElement>(".map canvas"), {
+    mode: "content",
+    spare: 2,
+    onHover: (h, col) => (hover.textContent = h ? describe(h, col) : "Point at a byte to decode it."),
+  });
+
+  const el = (tag: string, text: string, cls?: string) => {
+    const e = document.createElement(tag);
+    e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  };
+  const link = (href: string, text: string) => {
+    const a = el("a", text, "mono") as HTMLAnchorElement;
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  };
+  const bytes = (b: Uint8Array) => (isZero(b) ? "— zeros" : hex(b));
+
+  function state(c: Collection) {
+    if (c.flags & FLAG_REVEALED) return "Revealed";
+    if (c.flags & FLAG_CLOSED) return "Closed";
+    return "Minting";
+  }
+
+  async function summary(a: Account) {
+    const c = a.col;
+    const box = $("[data-summary]");
+    const items: [string, string][] = [
+      ["State", state(c)],
+      ["Minted", `${int(c.minted)} / ${int(c.maxSupply)}`],
+      ["Mint price", c.mintPrice ? `${sol(c.mintPrice)} SOL` : "Free"],
+      ["Listed", int(c.slots.filter((s) => s.price > 0).length)],
+      ["Account", `${int(a.data.length)} B`],
+      ["Balance", `${sol(a.lamports)} SOL`],
+    ];
+    box.replaceChildren(
+      ...items.map(([k, v]) => {
+        const d = el("div", "");
+        d.append(el("span", k, "label"), el("span", v, "v"));
+        return d;
+      }),
+    );
+    try {
+      const rate = await lamportsPerByte();
+      const min = Math.round((128 + a.data.length) * rate);
+      const excess = Number(a.lamports) - min;
+      if (excess > 0) {
+        const d = el("div", "");
+        d.append(el("span", "Withdrawable", "label"), el("span", `${sol(excess)}\u00a0SOL`, "v"));
+        box.append(d);
+      }
+    } catch {
+    }
+  }
+
+  function header(a: Account) {
+    const c = a.col;
+    const rows: [string, string | HTMLElement][] = [
+      ["address", link(explorerAddress(a.address), a.address)],
+      ["flags", `0b${c.flags.toString(2).padStart(2, "0")} (${state(c).toLowerCase()})`],
+      ["max_supply", int(c.maxSupply)],
+      ["minted", int(c.minted)],
+      ["fee_bps", `${c.feeBps} (${c.feeBps / 100}%)`],
+      ["nonce", String(c.nonce)],
+      ["bump", String(c.bump)],
+      ["mint_price", `${int(c.mintPrice)} lamports`],
+      ["creator", link(explorerAddress(c.creator), c.creator)],
+      ["treasury", link(explorerAddress(c.treasury), c.treasury)],
+      ["provenance", bytes(c.provenance)],
+      ["secret", bytes(c.secret)],
+      ["entropy", bytes(c.entropy)],
+      ["generator_hash", bytes(c.generatorHash)],
+    ];
+    $("[data-kv]").replaceChildren(
+      ...rows.flatMap(([k, v]) => {
+        const dd = document.createElement("dd");
+        if (typeof v === "string") dd.append(el("span", v, "mono"));
+        else dd.append(v);
+        return [el("dt", k, "mono"), dd];
+      }),
+    );
+  }
+
+  function slots() {
+    if (!acc) return;
+    const list = acc.col.slots.filter((s) => filter === "all" || s.price > 0);
+    const body = $("[data-rows]");
+    body.replaceChildren(
+      ...list.slice(0, shown).map((s) => {
+        const tr = document.createElement("tr");
+        const id = el("td", pad(s.id), "mono");
+        id.setAttribute("align", "right");
+        const owner = document.createElement("td");
+        owner.append(link(explorerAddress(s.owner), s.owner));
+        const price = el("td", s.price ? `${sol(BigInt(s.price) * PRICE_UNIT)} SOL` : "—");
+        price.setAttribute("align", "right");
+        const off = el("td", String(224 + s.id * 36), "mono dim");
+        off.setAttribute("align", "right");
+        tr.append(id, owner, price, off);
+        return tr;
+      }),
+    );
+    if (!list.length) {
+      const tr = document.createElement("tr");
+      const td = el("td", filter === "listed" ? "Nothing is listed." : "No tokens minted yet.", "dim") as HTMLTableCellElement;
+      td.colSpan = 4;
+      tr.append(td);
+      body.append(tr);
+    }
+    $("[data-more]").hidden = list.length <= shown;
+  }
+
+  const submit = $<HTMLButtonElement>("[data-submit]");
+
+  function explain(msg: string): string {
+    if (/GL-36/.test(msg)) return "This account isn’t a GL-36 collection. Paste the address of a collection account, not a wallet or the program.";
+    if (/No account/.test(msg)) return "Nothing lives at this address on this cluster. Check the address, or point RPC at the cluster where the collection was created.";
+    if (/Invalid param|WrongSize|base58/i.test(msg)) return "That isn’t a valid Solana address. Addresses are 32–44 base58 characters.";
+    if (/429/.test(msg)) return "The RPC endpoint is rate-limiting requests. Wait a few seconds and try again, or set your own RPC.";
+    return `The RPC request failed: ${msg}. Try again, or set a different RPC endpoint.`;
+  }
+
+  async function inspect(address: string) {
+    status.textContent = "Reading…";
+    submit.disabled = true;
+    try {
+      acc = await fetchCollection(address.trim());
+      status.textContent = "";
+      result.hidden = false;
+      shown = PAGE;
+      summary(acc);
+      header(acc);
+      field.set(acc.data);
+      slots();
+      syncUrl();
+    } catch (e) {
+      result.hidden = true;
+      status.textContent = explain(e instanceof Error ? e.message : String(e));
+      input.focus();
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    inspect(input.value);
+  });
+  document.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((b) =>
+    b.addEventListener("click", () => {
+      input.value = b.dataset.pick!;
+      inspect(input.value);
+    }),
+  );
+  function syncUrl() {
+    const url = new URL(location.href);
+    if (acc) url.searchParams.set("address", acc.address);
+    if (filter === "listed") url.searchParams.set("filter", "listed");
+    else url.searchParams.delete("filter");
+    history.replaceState(null, "", url);
+  }
+  const thumb = $(".seg .thumb");
+  function placeThumb(jump = false) {
+    const on = $<HTMLButtonElement>("[data-filter][aria-pressed=true]");
+    if (jump) thumb.style.transition = "none";
+    thumb.style.width = `${on.offsetWidth}px`;
+    thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+    if (jump) {
+      void thumb.offsetWidth;
+      thumb.style.transition = "";
+    }
+  }
+  new ResizeObserver(() => placeThumb(true)).observe($(".seg"));
+
+  function setFilter(f: typeof filter) {
+    filter = f;
+    document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x.getAttribute("data-filter") === f)));
+    shown = PAGE;
+    placeThumb();
+  }
+  document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((b) =>
+    b.addEventListener("click", () => {
+      setFilter(b.dataset.filter as typeof filter);
+      slots();
+      syncUrl();
+    }),
+  );
+  $("[data-more]").addEventListener("click", () => {
+    shown += PAGE;
+    slots();
+  });
+
+  const rpcInput = $<HTMLInputElement>("#rpc");
+  rpcInput.value = rpcUrl();
+  $<HTMLFormElement>("[data-rpc]").addEventListener("submit", (e) => {
+    e.preventDefault();
+    setRpcUrl(rpcInput.value.trim());
+    rpcInput.value = rpcUrl();
+    if (input.value) inspect(input.value);
+  });
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("address")) input.value = params.get("address")!;
+  if (params.get("filter") === "listed") setFilter("listed");
+  if (input.value) inspect(input.value);
+</script>
+
+<style>
+  .insp {
+    padding-top: 56px;
+  }
+  .head {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .head code {
+    font-size: 0.86em;
+  }
+  .query {
+    display: flex;
+    gap: 12px;
+    max-width: 880px;
+  }
+  .query input,
+  .rpc input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--bg-elev);
+    color: var(--fg);
+    font-size: 14px;
+    transition: border-color 0.2s var(--ease);
+  }
+  .query input:focus,
+  .rpc input:focus {
+    outline: none;
+    border-color: var(--fg);
+  }
+  .known {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .known .label {
+    margin-right: 6px;
+  }
+  .chip {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    font-size: 13px;
+    cursor: pointer;
+    transition:
+      border-color 0.2s var(--ease),
+      transform 0.1s ease-out;
+  }
+  .chip:active,
+  .seg button:active {
+    transform: scale(0.97);
+  }
+  .chip:hover {
+    border-color: var(--fg);
+  }
+  .rpc {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--fg-2);
+  }
+  .rpc summary {
+    cursor: pointer;
+    list-style: none;
+  }
+  .rpc summary::-webkit-details-marker {
+    display: none;
+  }
+  .rpc form {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    width: min(440px, 80vw);
+  }
+  .status {
+    min-height: 24px;
+    margin: 24px 0 0;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    margin: 8px 0 48px;
+    border-top: 1px solid var(--line);
+  }
+  .summary :global(div) {
+    display: grid;
+    gap: 8px;
+    padding: 20px 20px 22px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .summary :global(.v) {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.024em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .panel {
+    padding: 28px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+    min-width: 0;
+  }
+  .panel h2 {
+    margin: 0 0 20px;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .panel-head h2 {
+    margin: 0;
+  }
+  .hover {
+    margin: 0;
+    font-size: 12px;
+    color: var(--fg-2);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0 20px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .kv :global(dt),
+  .kv :global(dd) {
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+  }
+  .kv :global(dt) {
+    color: var(--fg-3);
+  }
+  .kv :global(dd) {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .kv :global(a:hover),
+  .slots :global(a:hover) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .map {
+    color: var(--fg);
+  }
+  .map canvas {
+    width: 100%;
+  }
+  .map-note {
+    margin: 16px 0 0;
+    font-size: 13px;
+    color: var(--fg-3);
+  }
+
+  .slots {
+    margin-top: 16px;
+  }
+  .slots table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .slots th {
+    padding: 0 12px 10px 0;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-2);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .slots :global(td) {
+    padding: 10px 12px 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .slots th[align="right"],
+  .slots :global(td[align="right"]) {
+    text-align: right;
+  }
+  .slots :global(.dim) {
+    color: var(--fg-3);
+  }
+  .slots :global(td a) {
+    overflow-wrap: anywhere;
+  }
+  .more {
+    margin-top: 20px;
+  }
+  .seg {
+    position: relative;
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--bg-elev-2);
+  }
+  .thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    border-radius: 8px;
+    background: var(--bg);
+    transition:
+      transform var(--spring-dur) var(--spring),
+      width var(--spring-dur) var(--spring);
+  }
+  .seg button {
+    position: relative;
+    z-index: 1;
+    height: 28px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--fg-2);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] {
+    color: var(--fg);
+  }
+
+  @media (max-width: 960px) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .query {
+      flex-direction: column;
+    }
+    .panel {
+      padding: 20px;
+    }
+    .slots th:nth-child(4),
+    .slots :global(td:nth-child(4)) {
+      display: none;
+    }
+    .rpc {
+      margin-left: 0;
+    }
+  }
+</style>

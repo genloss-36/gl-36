@@ -1,0 +1,111 @@
+---
+import Base from "../layouts/Base.astro";
+import { t, type Lang, type Key } from "../i18n/strings";
+import { DOCS_URL, TESTNET } from "../lib/config";
+import Mark from "./Mark.tsx";
+import SoundToggle from "./SoundToggle.tsx";
+import WalletButton from "./WalletButton.tsx";
+import HeroLive from "./HeroLive.tsx";
+import DecayStory from "./DecayStory.tsx";
+import MintPanel from "./MintPanel.tsx";
+import Gallery from "./Gallery.tsx";
+import StandardLive from "./StandardLive.tsx";
+import FooterLive from "./FooterLive.tsx";
+import Cursor from "./Cursor.tsx";
+import Runtime from "./Runtime.tsx";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const other = lang === "zh" ? base : `${base}zh/`;
+const facts: { t: Key; d: Key }[] = [
+  { t: "std.a.t", d: "std.a.d" },
+  { t: "std.b.t", d: "std.b.d" },
+  { t: "std.c.t", d: "std.c.d" },
+];
+---
+
+<Base lang={lang}>
+  <a class="skip" href="#main">{t(lang, "nav.skip")}</a>
+
+  <header class="nav">
+    <div class="wide">
+      <a class="brand" href="#top" translate="no"><Mark client:load />GENLOSS</a>
+      <nav class="links" aria-label="Main">
+        <a href="#mint">{t(lang, "nav.mint")}</a>
+        <a href="#collection">{t(lang, "nav.collection")}</a>
+        <a href="#gl-36" translate="no">{t(lang, "nav.standard")}</a>
+      </nav>
+      <div class="end">
+        {TESTNET && <span class="net">{t(lang, "net.devnet")}</span>}
+        <a class="lang" href={other} hreflang={lang === "zh" ? "en" : "zh-CN"}>{t(lang, "nav.lang")}</a>
+        <SoundToggle client:only="react" lang={lang} />
+        <WalletButton client:only="react" lang={lang} />
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="live" id="top">
+      <HeroLive client:only="react" />
+      <div class="live-copy">
+        <div class="wide">
+          <h1 class="display qr">{t(lang, "hero.title")}</h1>
+          <p class="lead">{t(lang, "hero.lead")}</p>
+          <div class="actions">
+            <a class="btn primary" href="#mint">{t(lang, "hero.mintFree")}</a>
+            <a class="link" href="#collection">{t(lang, "hero.view")}</a>
+          </div>
+          <p class="hint-live">{t(lang, "hero.touch")}</p>
+        </div>
+      </div>
+    </section>
+
+    <DecayStory client:only="react" lang={lang} />
+
+    <section class="section center" id="mint">
+      <div class="wrap">
+        <h2 class="headline qr">{t(lang, "mint.title")}</h2>
+        <p class="subhead">{t(lang, "mint.lead")}</p>
+        <MintPanel client:only="react" lang={lang} />
+      </div>
+    </section>
+
+    <section class="section" id="collection">
+      <div class="wide">
+        <Gallery client:only="react" lang={lang} />
+      </div>
+    </section>
+
+    <section class="section center" id="gl-36">
+      <div class="wrap">
+        <h2 class="headline qr">{t(lang, "std.title")}</h2>
+        <p class="subhead">{t(lang, "std.lead")}</p>
+        <div class="facts">
+          {
+            facts.map((f) => (
+              <div>
+                <h3>{t(lang, f.t)}</h3>
+                <p>{t(lang, f.d)}</p>
+              </div>
+            ))
+          }
+        </div>
+        <StandardLive client:only="react" lang={lang} />
+        <p class="docs"><a class="link" href={DOCS_URL}>{t(lang, "std.docs")}</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wide">
+      <FooterLive client:only="react" lang={lang} />
+      {TESTNET && <p>{t(lang, "foot.note")}</p>}
+    </div>
+  </footer>
+
+  <Cursor client:only="react" />
+  <Runtime client:only="react" lang={lang} />
+</Base>

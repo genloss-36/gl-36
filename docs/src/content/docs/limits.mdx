@@ -1,0 +1,34 @@
+---
+title: Limits and constants
+nav: Limits
+description: Every numeric bound in GL-36 version 1, where it comes from and what it means in practice.
+---
+
+| Limit | Value | Source |
+| --- | ---: | --- |
+| Header | 224 bytes | Layout. |
+| Slot | 36 bytes | Layout. |
+| Tokens per collection | 65,535 | `max_supply` is a u16. |
+| Largest collection account | 2,359,484 bytes | `224 + 65,535 × 36`, well under Solana's 10 MiB. |
+| Tokens per `mint` | 1 – 10 | Program constant. Solana would allow up to 284: 10,240 bytes of growth per instruction. |
+| Market fee | 0 – 1,000 bps | 10% at most. |
+| Price unit | 1,000 lamports | 0.000001 SOL. |
+| Highest ask | 4,294,967,295 units | ≈ 4,294.97 SOL. |
+| Mint price | up to u64 max | Lamports per token. |
+| Collections per creator | 2³² | One per nonce. |
+
+## Transactions
+
+| Limit | Value |
+| --- | ---: |
+| Largest instruction data | 81 bytes (`init`) |
+| Largest account list | 5 accounts (`mint`, `buy`) |
+| A `buy` transaction | about 400 bytes of the 1,232-byte limit |
+
+## Throughput
+
+Every instruction writes the collection account. Solana allows 12M compute units per writable account per block, so one collection handles about 4,000 mints or buys per block, or about 30,000 transfers. Different collections never contend with each other.
+
+## Layout version
+
+`version` is byte 1 of the header and is `1` for everything described here. A future layout will use a new version number; the program rejects accounts whose version it doesn't know, and decoders should too.

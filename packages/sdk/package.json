@@ -1,0 +1,53 @@
+{
+  "name": "@gl36/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for GL-36, an NFT standard for Solana where a token takes 36 bytes.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts",
+    "prepack": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^8.5.0"
+  },
+  "devDependencies": {
+    "@solana/kit": "8.5.0",
+    "@types/node": "24.19.2",
+    "litesvm": "1.6.1",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "homepage": "https://gl36.org/docs/client/",
+  "keywords": [
+    "solana",
+    "nft",
+    "gl-36",
+    "kit",
+    "sdk"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

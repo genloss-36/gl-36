@@ -1,0 +1,338 @@
+---
+import { RENT, ACCOUNT_OVERHEAD } from "../lib/config";
+
+interface Props {
+  supply?: number;
+}
+const { supply = 10_000 } = Astro.props;
+---
+
+<div class="calc" data-calc data-supply={supply} data-overhead={ACCOUNT_OVERHEAD}>
+  <div class="controls">
+    <label class="supply">
+      <span class="label">Collection size</span>
+      <output class="n" data-n>{supply.toLocaleString("en-US")}</output>
+      <input type="range" min="0" max="1000" step="1" data-range aria-label="Collection size" />
+    </label>
+    <div class="seg" role="group" aria-label="Rent rate">
+      <span class="thumb" aria-hidden="true"></span>
+      <button class="press" type="button" aria-pressed="true" data-rate={RENT.now}>
+        Today<span>{RENT.now.toLocaleString("en-US")}&nbsp;lamports per byte</span>
+      </button>
+      <button class="press" type="button" aria-pressed="false" data-rate={RENT.afterCuts}>
+        After SIMD-0437<span>{RENT.afterCuts}&nbsp;lamports per byte</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="rows">
+    <div class="row gl">
+      <div class="who">
+        <span class="name">GL-36</span>
+        <span class="bytes" data-gl-bytes></span>
+      </div>
+      <div class="track"><span class="fill" data-gl-bar></span></div>
+      <div class="cost"><span data-gl-sol></span>&nbsp;SOL</div>
+    </div>
+    <div class="row classic">
+      <div class="who">
+        <span class="name">Classic NFT</span>
+        <span class="bytes" data-cl-bytes></span>
+      </div>
+      <div class="track"><span class="fill" data-cl-bar></span></div>
+      <div class="cost"><span data-cl-sol></span>&nbsp;SOL</div>
+    </div>
+  </div>
+
+  <p class="saving" aria-live="polite"><span data-ratio></span>× less rent. <span class="muted">You keep <span data-saved></span>&nbsp;SOL.</span></p>
+</div>
+
+<script>
+  const CLASSIC = 82 + 165 + 679 + 282;
+  const HEADER = 224;
+  const SLOT = 36;
+  const MIN = 100;
+  const MAX = 65_535;
+  const toSupply = (p: number) => {
+    if (p >= 1000) return MAX;
+    const raw = MIN * Math.pow(MAX / MIN, p / 1000);
+    const step = raw < 1_000 ? 10 : raw < 10_000 ? 100 : 500;
+    return Math.round(raw / step) * step;
+  };
+  const toPos = (n: number) => Math.round((Math.log(n / MIN) / Math.log(MAX / MIN)) * 1000);
+  const fmt = (lamports: number) => {
+    const v = lamports / 1e9;
+    return v.toLocaleString("en-US", { maximumFractionDigits: v < 1 ? 4 : v < 100 ? 2 : 0 });
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-calc]").forEach((root) => {
+    const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
+    const range = $<HTMLInputElement>("[data-range]");
+    const overhead = Number(root.dataset.overhead);
+    let rate = Number($<HTMLButtonElement>("[aria-pressed=true]").dataset.rate);
+    let n = Number(root.dataset.supply);
+    range.value = String(toPos(n));
+
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let shown = { gl: 0, cl: 0 };
+    let raf = 0;
+
+    const paint = (gl: number, cl: number) => {
+      shown = { gl, cl };
+      $("[data-gl-sol]").textContent = fmt(gl);
+      $("[data-cl-sol]").textContent = fmt(cl);
+      $<HTMLElement>("[data-gl-bar]").style.transform = `scaleX(${Math.max(gl / cl, 0.004)})`;
+      $("[data-ratio]").textContent = (cl / gl).toFixed(1);
+      $("[data-saved]").textContent = fmt(cl - gl);
+    };
+
+    const render = (animate = false) => {
+      const glBytes = overhead + HEADER + n * SLOT;
+      const clBytes = n * (CLASSIC + 4 * overhead);
+      const gl = glBytes * rate;
+      const cl = clBytes * rate;
+      $("[data-n]").textContent = n.toLocaleString("en-US");
+      range.setAttribute("aria-valuetext", `${n.toLocaleString("en-US")} tokens`);
+      $("[data-gl-bytes]").textContent = `${glBytes.toLocaleString("en-US")} bytes, 1 account`;
+      $("[data-cl-bytes]").textContent = `${clBytes.toLocaleString("en-US")} bytes, ${(n * 4).toLocaleString("en-US")} accounts`;
+      cancelAnimationFrame(raf);
+      if (!animate || still || !shown.cl) return paint(gl, cl);
+      const from = shown;
+      const w = (2 * Math.PI) / 0.4;
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const t = (now - t0) / 1000;
+        const x = t >= 0.7 ? 1 : 1 - (1 + w * t) * Math.exp(-w * t);
+        paint(from.gl + (gl - from.gl) * x, from.cl + (cl - from.cl) * x);
+        if (x < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    };
+
+    const seg = $<HTMLElement>(".seg");
+    const thumb = $<HTMLElement>(".thumb");
+    const place = (jump = false) => {
+      const on = $<HTMLButtonElement>("[aria-pressed=true]");
+      if (jump) thumb.style.transition = "none";
+      thumb.style.width = `${on.offsetWidth}px`;
+      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+      if (jump) {
+        void thumb.offsetWidth;
+        thumb.style.transition = "";
+      }
+    };
+    new ResizeObserver(() => place(true)).observe(seg);
+
+    range.addEventListener("input", () => {
+      n = toSupply(Number(range.value));
+      render();
+    });
+    root.querySelectorAll<HTMLButtonElement>("[data-rate]").forEach((b) =>
+      b.addEventListener("click", () => {
+        rate = Number(b.dataset.rate);
+        root.querySelectorAll("[data-rate]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        place();
+        render(true);
+      }),
+    );
+    render();
+  });
+</script>
+
+<style>
+  .calc {
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+    padding: clamp(24px, 4vw, 48px);
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .supply {
+    display: grid;
+    gap: 10px;
+    flex: 1 1 320px;
+    max-width: 520px;
+  }
+  .n {
+    font-family: var(--font-display);
+    font-size: clamp(44px, 6vw, 72px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 28px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    background: var(--line-strong);
+    border-radius: 2px;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 2px;
+    background: var(--line-strong);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -10px;
+    border-radius: 50%;
+    background: var(--fg);
+    box-shadow: 0 1px 6px rgb(0 0 0 / 0.3);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--fg);
+  }
+
+  .seg {
+    position: relative;
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--bg-elev-2);
+  }
+  .thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    border-radius: 9px;
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+    transition:
+      transform var(--spring-dur) var(--spring),
+      width var(--spring-dur) var(--spring);
+  }
+  .seg button {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 2px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--fg-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color 0.2s var(--ease),
+      color 0.2s var(--ease),
+      transform 0.1s ease-out;
+  }
+  .seg button:hover {
+    color: var(--fg);
+  }
+  .seg button:active {
+    transform: scale(0.97);
+  }
+  .seg button span {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--fg-2);
+  }
+  .seg button[aria-pressed="true"] {
+    color: var(--fg);
+  }
+
+  .rows {
+    display: grid;
+    gap: 28px;
+    margin-top: 44px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 220px 1fr auto;
+    align-items: center;
+    gap: 24px;
+  }
+  .who {
+    display: grid;
+    gap: 2px;
+  }
+  .name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .bytes {
+    font-size: 13px;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .track {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    overflow: hidden;
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--fg);
+    transform-origin: left;
+  }
+  .classic .fill {
+    background: var(--fg-3);
+  }
+  .cost {
+    min-width: 9ch;
+    text-align: right;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .classic .cost {
+    color: var(--fg-2);
+  }
+  .saving {
+    margin: 40px 0 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .muted {
+    color: var(--fg-2);
+    font-weight: 500;
+  }
+
+  @media (max-width: 720px) {
+    .row {
+      grid-template-columns: 1fr auto;
+      gap: 10px 16px;
+    }
+    .track {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .seg {
+      width: 100%;
+    }
+    .seg button {
+      flex: 1;
+    }
+  }
+</style>

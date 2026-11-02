@@ -1,0 +1,57 @@
+.astro-code,
+.astro-code span {
+  color: var(--shiki-dark);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+}
+
+:root[data-theme="light"] .astro-code,
+:root[data-theme="light"] .astro-code span {
+  color: var(--shiki-light);
+  font-weight: var(--shiki-light-font-weight, inherit);
+}
+
+.prose .code {
+  position: relative;
+  margin: 24px 0 28px;
+}
+.prose pre {
+  margin: 0;
+  background: var(--bg-elev);
+  padding: 20px 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+.prose pre code {
+  font-size: inherit;
+}
+.prose .copy {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease), color 0.2s var(--ease);
+}
+.prose .code:hover .copy,
+.prose .copy:focus-visible {
+  opacity: 1;
+}
+.prose .copy:hover {
+  color: var(--fg);
+}
+@media (hover: none) {
+  .prose .copy {
+    opacity: 1;
+  }
+}

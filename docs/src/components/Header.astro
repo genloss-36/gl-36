@@ -1,0 +1,278 @@
+---
+import Mark from "./Mark.astro";
+import { TESTNET, CLUSTER } from "../lib/config";
+
+interface Props {
+  current?: "home" | "docs" | "reference" | "inspector";
+  menu?: boolean;
+}
+const { current, menu = false } = Astro.props;
+const links = [
+  { id: "docs", href: "/docs/", label: "Docs" },
+  { id: "reference", href: "/docs/instructions/", label: "Reference" },
+  { id: "inspector", href: "/inspector/", label: "Inspector" },
+] as const;
+---
+
+<header class="bar" data-bar>
+  <div class="wide row">
+    <a class="brand" href="/" aria-label="GL-36 home">
+      <Mark size={20} />
+      <span translate="no">GL-36</span>
+    </a>
+    <nav class="links" aria-label="Main">
+      {
+        links.map((l) => (
+          <a href={l.href} aria-current={current === l.id ? "page" : undefined}>
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+    <div class="end">
+      <button class="search-btn press" type="button" data-search-open aria-label="Search the docs" aria-keyshortcuts="Meta+K Control+K /">
+        <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true">
+          <circle cx="7.75" cy="7.75" r="5.75" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+          <path d="m12 12 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+        <span class="t">Search</span>
+        <kbd data-kbd aria-hidden="true">⌘K</kbd>
+      </button>
+      {
+        TESTNET && (
+          <span class="pill net" title={`Program deployed on ${CLUSTER}`}>
+            <span class="dot" />
+            {CLUSTER === "devnet" ? "Devnet" : CLUSTER}
+          </span>
+        )
+      }
+      <button class="icon press" type="button" data-theme-toggle aria-label="Switch to light theme">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+          <path d="M8 1.75a6.25 6.25 0 0 1 0 12.5Z" fill="currentColor"></path>
+        </svg>
+      </button>
+      {
+        menu && (
+          <button class="menu press" type="button" data-menu-toggle aria-expanded="false" aria-controls="sidebar">
+            Menu
+          </button>
+        )
+      }
+    </div>
+  </div>
+</header>
+
+<script>
+  const KEY = "gl36.theme";
+  const root = document.documentElement;
+  const mac = /Mac|iPhone|iPad/.test(navigator.userAgent);
+  document.querySelectorAll("[data-kbd]").forEach((k) => (k.textContent = mac ? "⌘K" : "Ctrl K"));
+
+  const dark = () => root.dataset.theme !== "light";
+  const toggle = document.querySelector<HTMLButtonElement>("[data-theme-toggle]")!;
+  const sync = () => {
+    toggle.setAttribute("aria-label", dark() ? "Switch to light theme" : "Switch to dark theme");
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.content = dark() ? "#000000" : "#ffffff";
+    document.head.append(meta);
+  };
+  sync();
+  toggle.addEventListener("click", () => {
+    const next = dark() ? "light" : "dark";
+    const apply = () => {
+      if (next === "light") root.dataset.theme = "light";
+      else delete root.dataset.theme;
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+      }
+      sync();
+      window.dispatchEvent(new Event("gl36:theme"));
+    };
+    if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(apply);
+    } else apply();
+  });
+
+  const bar = document.querySelector<HTMLElement>("[data-bar]")!;
+  const edge = () => bar.toggleAttribute("data-scrolled", window.scrollY > 4);
+  edge();
+  window.addEventListener("scroll", edge, { passive: true });
+
+  const menu = document.querySelector<HTMLButtonElement>("[data-menu-toggle]");
+  const setMenu = (open: boolean) => {
+    if (!menu) return;
+    document.body.toggleAttribute("data-menu-open", open);
+    menu.setAttribute("aria-expanded", String(open));
+    menu.textContent = open ? "Close" : "Menu";
+    document.querySelectorAll("main, footer").forEach((el) => el.toggleAttribute("inert", open));
+    if (open) (document.querySelector<HTMLElement>("#sidebar a[aria-current]") ?? document.querySelector<HTMLElement>("#sidebar a"))?.focus();
+  };
+  menu?.addEventListener("click", () => setMenu(!document.body.hasAttribute("data-menu-open")));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.hasAttribute("data-menu-open")) {
+      setMenu(false);
+      menu?.focus();
+    }
+  });
+  document.querySelectorAll("#sidebar a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
+  matchMedia("(min-width: 1025px)").addEventListener("change", (m) => m.matches && setMenu(false));
+</script>
+
+<style>
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    view-transition-name: bar;
+    height: var(--header-h);
+    background: var(--bar-bg);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s var(--ease);
+  }
+  .bar[data-scrolled] {
+    border-bottom-color: var(--line);
+  }
+  .row {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .links {
+    display: flex;
+    gap: 24px;
+    margin-left: auto;
+  }
+  .links a {
+    padding-block: 10px;
+    color: var(--fg-2);
+    transition: color 0.2s var(--ease);
+  }
+  .links a:hover,
+  .links a[aria-current="page"] {
+    color: var(--fg);
+  }
+  .end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .search-btn,
+  .net,
+  .icon {
+    --fill: var(--bg-elev-2);
+    height: 32px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--fill);
+    color: var(--fg-2);
+    font-size: 13px;
+    transition:
+      color 0.2s var(--ease),
+      background-color 0.2s var(--ease),
+      transform 0.1s ease-out;
+  }
+  .search-btn:hover,
+  .icon:hover {
+    --fill: color-mix(in srgb, var(--bg-elev-2), var(--fg) 8%);
+    color: var(--fg);
+  }
+  .search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px 0 12px;
+    cursor: pointer;
+  }
+  .search-btn:active {
+    transform: scale(0.97);
+  }
+  .search-btn .t {
+    min-width: 72px;
+    text-align: left;
+  }
+  .search-btn kbd {
+    display: inline-grid;
+    place-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--fg-2);
+  }
+  .net {
+    padding: 0 12px 0 11px;
+    gap: 8px;
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .icon:active {
+    transform: scale(0.9);
+  }
+  .menu {
+    display: none;
+    border: 0;
+    background: none;
+    padding: 6px 0;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  @media (max-width: 960px) {
+    .search-btn {
+      width: 32px;
+      padding: 0;
+      justify-content: center;
+    }
+    .search-btn .t,
+    .search-btn kbd {
+      display: none;
+    }
+  }
+  @media (max-width: 720px) {
+    .row {
+      gap: 16px;
+    }
+    .links {
+      gap: 16px;
+    }
+    .links a:nth-child(2) {
+      display: none;
+    }
+    .net {
+      display: none;
+    }
+  }
+  @media (max-width: 1024px) {
+    .menu {
+      display: block;
+    }
+  }
+  @media (max-width: 420px) {
+    .links a:nth-child(3) {
+      display: none;
+    }
+  }
+</style>

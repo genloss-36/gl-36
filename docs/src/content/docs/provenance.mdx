@@ -1,0 +1,60 @@
+---
+title: Provenance and reveal
+nav: Provenance
+description: How a GL-36 collection commits to its content before the mint, and why neither collectors nor the creator can pick tokens in advance.
+---
+
+import Note from "../../components/Note.astro";
+
+GL-36 doesn't store metadata. A token's content is computed off-chain by a **generator** — deterministic code published by the creator — from a seed that only exists once the mint is over. Three header fields make this verifiable.
+
+| Field | Set at | Purpose |
+| --- | --- | --- |
+| `generator_hash` | `init` | sha256 of the generator. Pins the code that turns seeds into content. |
+| `provenance` | `init` | `sha256(secret)`. Commits the creator to a secret without revealing it. |
+| `entropy` | mint closes | Latest slot hash from the `SlotHashes` sysvar. Unknown to everyone until then. |
+| `secret` | `reveal` | The preimage of `provenance`, checked by the program. |
+
+## Token seed
+
+The program stores the inputs; the seed is a convention between the generator and the front ends that run it. Once revealed, the seed of token `id` is
+
+```
+seed(id) = sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id as u16 little-endian)
+```
+
+`domain` is a string fixed by the generator, such as `"genloss/v1"`. `collection` is the 32-byte account address. The generator turns the seed into content; nothing else goes in.
+
+## Why this is fair
+
+- **Collectors can't choose.** Until `reveal`, the secret is unknown, so no one can compute what any id will be and mint or buy only the good ones.
+- **The creator can't choose either.** The secret is fixed by `provenance` before the first mint. The entropy is a slot hash taken when the mint closes, which the creator doesn't control when committing. They can't steer good tokens to their own ids.
+- **The code can't change.** `generator_hash` is fixed at `init`. Anyone can hash the published generator and compare.
+
+## Lifecycle
+
+1. **init** — the creator picks a random 32-byte secret, stores `sha256(secret)` as `provenance` and the generator's hash as `generator_hash`.
+2. **mint** — tokens are minted. Content is not computable yet; front ends show a placeholder.
+3. **close** — the last mint that reaches `max_supply` writes the entropy and sets `CLOSED`. Or the creator closes early with `reveal`.
+4. **reveal** — the creator publishes the secret. The program checks `sha256(secret) == provenance`, stores it and sets `REVEALED`. If the mint was still open, it also writes the entropy and lowers `max_supply` to `minted`.
+
+```ts
+import { revealIx } from "@gl36/sdk";
+
+await send(creator, [revealIx(PROGRAM, creator, COLLECTION, secret)]);
+```
+
+<Note label="Keep the secret">
+  If the secret is lost, the collection can never be revealed: the program accepts only the preimage of <code>provenance</code>. Store it like a private key. If it leaks before the mint closes, the first part of the fairness argument is gone.
+</Note>
+
+## Generators
+
+A generator is any deterministic program — JavaScript, WebAssembly, a shader — that maps a 32-byte seed to content. To be verifiable it must produce identical output on every machine:
+
+- No `Math.random`, no time, no network, no fonts, no `Intl`.
+- No floating-point functions whose results differ between engines — `Math.sin`, `cos`, `exp`, `pow`, `log`, `sqrt`. Use tables and integer arithmetic.
+- No canvas or GPU in the computation itself; draw only the finished pixels.
+- Define a canonical output — for images, sha256 of the raw pixels — and publish test vectors for a few ids.
+
+Serve the generator byte-for-byte as published so that front ends can hash it and compare with `generator_hash`.

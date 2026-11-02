@@ -1,0 +1,80 @@
+---
+title: Rent and cost
+nav: Rent and cost
+description: What a GL-36 collection costs to keep on Solana, who pays for it, and how the rent cuts of SIMD-0437 flow back to the creator.
+---
+
+import CostCalculator from "../../components/CostCalculator.astro";
+import Note from "../../components/Note.astro";
+
+Solana charges for state, not for activity. Every account must hold a minimum balance proportional to its size — the rent-exempt minimum — for as long as it exists:
+
+```
+rent(len) = (128 + len) × lamports_per_byte
+```
+
+The 128 bytes are fixed overhead that every account pays once. The rate is a cluster parameter; the program reads it from the `Rent` sysvar at the moment of each operation and never hard-codes it.
+
+## Compared with a classic NFT
+
+A Token Metadata NFT needs four accounts: a mint (82 bytes), a token account (165), a metadata account (679) and a master edition (282). With overhead that is 1,720 bytes per token. A GL-36 token is a 36-byte slot inside the collection account, so it pays no overhead of its own.
+
+<CostCalculator />
+
+| Per token | Bytes | At 5,080 lamports/byte | At 696 lamports/byte |
+| --- | ---: | ---: | ---: |
+| GL-36 slot | 36 | 182,880 lamports · 0.00018 SOL | 25,056 lamports · 0.000025 SOL |
+| Classic NFT | 1,720 | 8,737,600 lamports · 0.0087 SOL | 1,197,120 lamports · 0.0012 SOL |
+
+The header adds 224 bytes plus 128 of overhead once per collection: about 0.0018 SOL today.
+
+<Note label="About compressed NFTs">
+  Compressed NFTs store only a Merkle root on chain and cost even less storage per token. In exchange, reading ownership needs an off-chain indexer (the DAS API), and every transfer carries a Merkle proof. GL-36 stores ownership directly, so it reads with one RPC call and trades without proofs.
+</Note>
+
+## Who pays
+
+| What | Paid by | When |
+| --- | --- | --- |
+| Header, 224 bytes | Creator | `init` creates the account at its rent-exempt minimum. |
+| Each slot, 36 bytes | Minter | `mint` grows the account and tops it up to the new minimum. |
+| Mint price | Minter → creator | `mint`, `mint_price × count`. |
+| Market fee | Buyer → treasury | `buy`, `price × fee_bps / 10,000`. |
+| Network fee | Fee payer | Every transaction: 5,000 lamports per signature. |
+
+A `mint` transfers only the shortfall: `rent_min(new_len) − lamports`, never less than zero. If the account already holds surplus — for example after a rent cut — minters pay less until it is used up.
+
+## The SIMD-0437 cuts
+
+SIMD-0437 lowers the rent rate in steps. Steps 1 and 2 are live on mainnet since September 2026 at **5,080 lamports per byte**. Steps 3 to 5 (2,575 → 1,322 → 696) are scheduled with Agave 4.4.
+
+Because rent is read at run time, nothing in a collection has to change when the rate drops. The account simply holds more than it needs. The creator calls `withdraw_excess` to move the difference out:
+
+```ts
+import { withdrawExcessIx } from "@gl36/sdk";
+
+await send(creator, [withdrawExcessIx(PROGRAM, creator, COLLECTION)]);
+```
+
+`withdraw_excess` moves `lamports − rent_min(len)` to the creator and leaves the account exactly rent-exempt. It can be called any number of times; with nothing to withdraw it moves zero.
+
+<Note>
+  After a cut, the surplus includes rent that minters paid for their slots. <code>withdraw_excess</code> sends all of it to the creator, the only signer allowed to call it. Rent kept as the rent-exempt minimum stays in the account for as long as the collection exists.
+</Note>
+
+## Compute
+
+Rent is the main cost, but compute is small too. Measured on devnet:
+
+| Instruction | Compute units |
+| --- | ---: |
+| `init` | 3,253 |
+| `mint` × 1 | 2,971 |
+| `mint` × 10 | 3,189 |
+| `transfer` | 374 |
+| `list` | 452 |
+| `buy` | 2,901 |
+| `reveal` | 457 |
+| `withdraw_excess` | 401 |
+
+The instructions that move SOL (`init`, `mint`, `buy`) spend most of their budget on System Program CPIs. The rest only rewrite bytes.

@@ -1,0 +1,84 @@
+---
+import "@fontsource-variable/inter";
+import "@fontsource-variable/jetbrains-mono";
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Search from "../components/Search.astro";
+
+interface Props {
+  title?: string;
+  description: string;
+  current?: "home" | "docs" | "reference" | "inspector";
+  menu?: boolean;
+  noindex?: boolean;
+  schema?: Record<string, unknown>[];
+  ogType?: "website" | "article";
+}
+const { title, description, current, menu, noindex = false, schema = [], ogType = "website" } = Astro.props;
+const SITE_NAME = "GL-36";
+const fullTitle = title ? `${title} | ${SITE_NAME}` : "GL-36, an NFT standard for Solana";
+const abs = (path: string) => (Astro.site ? new URL(path, Astro.site).href : path);
+const url = abs(Astro.url.pathname);
+const image = abs("/og.png");
+const imageAlt = "An NFT is 36 bytes. GL-36, an NFT standard for Solana, over the byte map of a live collection account.";
+const ld = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    description: "An NFT standard for Solana where a token takes 36 bytes.",
+    url: abs("/"),
+    inLanguage: "en",
+  },
+  ...schema.map((s) => ({ "@context": "https://schema.org", ...s })),
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <meta name="theme-color" content="#000000" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={url} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+    {!noindex && <script type="application/ld+json" set:html={JSON.stringify(ld)} />}
+
+    <script is:inline>
+      try {
+        const t = localStorage.getItem("gl36.theme");
+        if (t === "light") document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <Header current={current} menu={menu} />
+    <slot />
+    <Footer />
+    <Search />
+  </body>
+</html>

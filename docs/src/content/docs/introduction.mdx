@@ -1,0 +1,44 @@
+---
+title: Introduction
+description: GL-36 is an NFT standard for Solana built around one idea — a token should cost as little storage as it can while staying tradable on chain.
+---
+
+import SlotDiagram from "../../components/SlotDiagram.astro";
+import Note from "../../components/Note.astro";
+
+On Solana every byte an account holds is paid for in rent. A classic NFT is spread over four accounts — mint, token account, metadata, master edition — and takes about 1,720 bytes once account overhead is counted. Most of that is the same for every token in a collection, or could be computed instead of stored.
+
+GL-36 keeps only what can't be computed: **who owns a token and what they're asking for it.** That is 36 bytes. All tokens of a collection sit side by side in one program-owned account, after a 224-byte header that holds what they share.
+
+<SlotDiagram />
+
+## What you get
+
+- **About 48× less rent per token.** 36 bytes instead of ~1,720. At today's rate that is 182,880 lamports per token instead of 8.7 million. See [Rent and cost](/docs/rent/).
+- **One read for everything.** A single `getAccountInfo` returns every owner and every listing of a collection. There is no indexer, no DAS API, no Merkle proof to fetch.
+- **A market inside the program.** `list`, `buy` and `transfer` are instructions of the same program that mints. Sales settle in SOL in one transaction with an optional market fee.
+- **A fair reveal.** Art is derived from a secret the creator commits to before the mint and a slot hash taken when the mint closes, so nobody — the creator included — can pick tokens in advance.
+- **Rent that goes back.** Each operation reads the current rent rate from the cluster. When Solana cuts rent, `withdraw_excess` returns the surplus to the creator.
+
+## What a token is not
+
+A GL-36 token is not an SPL token. It has no mint account, no token account and no metadata account, so it does not appear in wallets that only list SPL tokens and it can't be passed to programs that expect one. Wallets and marketplaces read GL-36 collections with the [TypeScript SDK](/docs/client/) or the byte layout in [Collection account](/docs/collection-account/).
+
+Metadata is not stored either. A collection commits to the hash of its generator — the code that turns a token's seed into its content — and anyone can recompute every token from public data. See [Provenance and reveal](/docs/provenance/).
+
+<Note label="Version">
+  This documentation describes layout version 1 of program <code>gl36</code> 0.1.0, deployed on Solana devnet. Bids and offers, a mint pause and allowlists are not part of version 1.
+</Note>
+
+## How the pieces fit
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| Program | `program/` | Rust with Pinocchio 0.12. Seven instructions, ~19.6 KB binary. |
+| SDK | `@gl36/sdk` | Instruction builders, account decoding, RPC reads, logs and errors, on `@solana/kit`. |
+| Collection account | on chain | 224-byte header plus 36 bytes per minted token. |
+| Generator | off chain | Deterministic code whose sha256 is stored in the collection header. |
+
+## Next
+
+Start with the [Quickstart](/docs/quickstart/) to read a live collection and mint from it, or go straight to the [Collection account](/docs/collection-account/) layout.

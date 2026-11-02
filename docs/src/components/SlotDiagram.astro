@@ -1,0 +1,196 @@
+---
+interface Props {
+  account?: boolean;
+}
+const { account = true } = Astro.props;
+const owner = Array.from({ length: 32 });
+const price = Array.from({ length: 4 });
+const slots = Array.from({ length: 7 });
+---
+
+<figure class="slot-fig" data-slot-fig>
+  <div class="slot" aria-hidden="true">
+    <div class="part owner">
+      <div class="cells">{owner.map((_, i) => <span style={`--i:${i}`} />)}</div>
+      <div class="ticks mono"><span>0</span><span>31</span></div>
+    </div>
+    <div class="part price">
+      <div class="cells">{price.map((_, i) => <span style={`--i:${i + 34}`} />)}</div>
+      <div class="ticks mono"><span>32</span><span>35</span></div>
+    </div>
+  </div>
+  <div class="legend">
+    <div>
+      <p class="k">owner</p>
+      <p class="v">32&nbsp;bytes: the owner’s public key.</p>
+    </div>
+    <div>
+      <p class="k">price</p>
+      <p class="v">4&nbsp;bytes: the ask as a u32 in units of 1,000&nbsp;lamports. Zero means not listed.</p>
+    </div>
+  </div>
+
+  {
+    account && (
+      <div class="acct">
+        <div class="strip" aria-hidden="true">
+          <span class="hdr" style="--j:0">header</span>
+          {slots.map((_, i) => (
+            <span class="s" style={`--j:${i + 1}`}>
+              {i}
+            </span>
+          ))}
+          <span class="more" style="--j:8">…</span>
+        </div>
+        <p class="formula mono">account length = 224 + minted × 36</p>
+      </div>
+    )
+  }
+  <figcaption class="sr-only">
+    A slot is 36 bytes: bytes 0 to 31 hold the owner, bytes 32 to 35 the listing price. The collection account is a
+    224-byte header followed by one slot per minted token.
+  </figcaption>
+</figure>
+
+<script>
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const io = new IntersectionObserver(
+      (es) =>
+        es.forEach((e) => {
+          if (!e.isIntersecting) return;
+          e.target.setAttribute("data-in", "");
+          io.unobserve(e.target);
+        }),
+      { threshold: 0.45 },
+    );
+    document.querySelectorAll<HTMLElement>("[data-slot-fig]").forEach((f) => {
+      if (f.getBoundingClientRect().top < innerHeight * 0.6) return;
+      f.setAttribute("data-motion", "");
+      io.observe(f);
+    });
+  }
+</script>
+
+<style>
+  .slot-fig[data-motion] .cells span,
+  .slot-fig[data-motion] .strip span {
+    opacity: 0;
+  }
+  .slot-fig[data-motion] .cells span {
+    transform: scale(0.3);
+  }
+  .slot-fig[data-motion] .strip span {
+    transform: translateX(-12px);
+  }
+  .slot-fig[data-in] .cells span,
+  .slot-fig[data-in] .strip span {
+    opacity: 1;
+    transform: none;
+  }
+  .slot-fig[data-in] .cells span {
+    transition:
+      opacity 0.2s var(--ease) calc(var(--i) * 14ms),
+      transform var(--spring-dur) var(--spring) calc(var(--i) * 14ms);
+  }
+  .slot-fig[data-in] .strip span {
+    transition:
+      opacity 0.3s var(--ease) calc(620ms + var(--j) * 45ms),
+      transform var(--spring-dur) var(--spring) calc(620ms + var(--j) * 45ms);
+  }
+
+  .slot-fig {
+    margin: 0;
+  }
+  .slot {
+    display: grid;
+    grid-template-columns: 32fr 4fr;
+    gap: clamp(4px, 0.8vw, 10px);
+  }
+  .cells {
+    display: grid;
+    gap: clamp(2px, 0.35vw, 5px);
+  }
+  .owner .cells {
+    grid-template-columns: repeat(32, 1fr);
+  }
+  .price .cells {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .cells span {
+    aspect-ratio: 1;
+    border-radius: 22%;
+    background: var(--fg);
+  }
+  .price .cells span {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--fg);
+  }
+  .ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--fg-3);
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .k {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .v {
+    margin: 4px 0 0;
+    font-size: 15px;
+    color: var(--fg-2);
+  }
+  .acct {
+    margin-top: 48px;
+  }
+  .strip {
+    display: grid;
+    grid-template-columns: 224fr repeat(7, 36fr) 30fr;
+    gap: 3px;
+    height: 44px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .strip span {
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    background: var(--bg-elev-2);
+    color: var(--fg-2);
+  }
+  .strip .hdr {
+    background: var(--fg);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .strip .s {
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    background: transparent;
+  }
+  .strip .more {
+    background: transparent;
+  }
+  .formula {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--fg-3);
+  }
+  @media (max-width: 560px) {
+    .legend {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+</style>

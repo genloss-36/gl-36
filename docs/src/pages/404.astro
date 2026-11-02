@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Not found" description="This page doesn't exist." noindex>
+  <main id="main" class="wide nf">
+    <h1 class="display">Zero<br />bytes here</h1>
+    <p class="lead">The page you're looking for doesn't exist. <a href="/docs/">Go to the docs</a>.</p>
+  </main>
+</Base>
+
+<style>
+  .nf {
+    display: grid;
+    gap: 24px;
+    padding-top: clamp(80px, 14vw, 200px);
+  }
+  .lead a {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+</style>

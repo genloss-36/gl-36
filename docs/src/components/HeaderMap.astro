@@ -1,0 +1,111 @@
+---
+import { HEADER } from "../lib/layout";
+
+const fieldIndex = (b: number) => HEADER.findIndex((f) => b >= f.off && b < f.off + f.len);
+const bytes = Array.from({ length: 224 }, (_, b) => fieldIndex(b));
+---
+
+<figure class="hmap" data-hmap>
+  <div class="grid" aria-hidden="true">
+    {bytes.map((f, b) => <span data-f={f} class:list={[`t${f % 2}`, HEADER[f].name === "reserved" && "res"]} title={`Byte ${b}: ${HEADER[f].name}`} />)}
+  </div>
+  <ol class="fields">
+    {
+      HEADER.map((f, i) => (
+        <li data-f={i} tabindex="0">
+          <span class="off mono">{f.off}</span>
+          <span class="name mono">{f.name}</span>
+          <span class="len">{f.len} B</span>
+        </li>
+      ))
+    }
+  </ol>
+  <figcaption class="sr-only">Header byte map; the same fields are listed in the table below.</figcaption>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-hmap]").forEach((root) => {
+    const set = (f: string | null) => {
+      root.toggleAttribute("data-active", f !== null);
+      root.querySelectorAll<HTMLElement>("[data-f]").forEach((el) => el.toggleAttribute("data-on", el.dataset.f === f));
+    };
+    root.querySelectorAll<HTMLElement>("[data-f]").forEach((el) => {
+      el.addEventListener("pointerenter", () => set(el.dataset.f ?? null));
+      el.addEventListener("focus", () => set(el.dataset.f ?? null));
+    });
+    root.addEventListener("pointerleave", () => set(null));
+    root.addEventListener("focusout", () => set(null));
+  });
+</script>
+
+<style>
+  .hmap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 40px;
+    margin: 32px 0 8px;
+    padding: 28px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 3px;
+    align-content: start;
+  }
+  .grid span {
+    aspect-ratio: 1;
+    border-radius: 22%;
+    background: var(--fg);
+    transition: opacity 0.2s var(--ease);
+  }
+  .grid .t1 {
+    opacity: 0.42;
+  }
+  .grid .res {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    opacity: 1;
+  }
+  .hmap[data-active] .grid span {
+    opacity: 0.12;
+  }
+  .hmap[data-active] .grid span[data-on] {
+    opacity: 1;
+  }
+  .fields {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  .fields li {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 8px;
+    padding: 4px 8px;
+    margin: 0 -8px;
+    border-radius: 6px;
+    cursor: default;
+    outline: none;
+  }
+  .fields li[data-on] {
+    background: var(--bg-elev-2);
+  }
+  .off,
+  .len {
+    color: var(--fg-3);
+  }
+  .len {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 720px) {
+    .hmap {
+      grid-template-columns: 1fr;
+      padding: 20px;
+      gap: 24px;
+    }
+  }
+</style>

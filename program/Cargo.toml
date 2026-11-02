@@ -1,0 +1,23 @@
+[package]
+name = "gl36"
+version = "0.1.0"
+edition = "2021"
+description = "GL-36: an NFT collection in one Solana account, 36 bytes per token"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pinocchio = { version = "0.12", default-features = false, features = ["cpi", "account-resize"] }
+pinocchio-system = "0.7"
+pinocchio-log = "0.5"
+solana-define-syscall = "5"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+overflow-checks = false

@@ -1,0 +1,70 @@
+---
+title: Built-in market
+nav: Market
+description: Listing, buying and transferring are instructions of the GL-36 program. Sales settle in SOL in one transaction, guarded against stale prices.
+---
+
+import Note from "../../components/Note.astro";
+
+GL-36 has no separate marketplace program and no escrow. The ask lives in the token's slot, and `buy` moves the SOL and the ownership in the same instruction. Any website, wallet or bot can list and buy; they all read and write the same bytes.
+
+## List and delist
+
+`list` writes the price into the owner's slot. Only the current owner can sign it. A price of `0` removes the listing.
+
+```ts
+await send(owner, [listIx(PROGRAM, owner, COLLECTION, id, 250_000)]); // 0.25 SOL
+await send(owner, [listIx(PROGRAM, owner, COLLECTION, id, 0)]);       // delist
+```
+
+The token never leaves the owner while listed. There is nothing to cancel or reclaim, and listing costs only the network fee.
+
+## Buy
+
+`buy` takes the seller and a maximum price as arguments, and checks both against the slot at execution time:
+
+1. The buyer is not the seller — `SelfBuy` (7).
+2. The slot is still owned by the seller passed in — `SellerMismatch` (6).
+3. The treasury matches the header — `WrongTreasury` (14).
+4. The slot is listed — `NotListed` (4).
+5. The price is at most `max_price` — `PriceAboveMax` (5).
+
+Then it pays the seller and the treasury from the buyer, sets the owner to the buyer and clears the price.
+
+```ts
+const slot = col.slots[id];
+await send(buyer, [
+  buyIx(PROGRAM, buyer, COLLECTION, slot.owner, col.treasury, id, slot.price),
+]);
+```
+
+<Note label="Why max_price and seller">
+  A buyer signs based on what they read a moment ago. Between that read and execution, the owner could raise the price, or sell or transfer the token to someone else who lists it higher. Passing the expected seller and the price you saw makes the purchase fail in both cases instead of paying more than you agreed to.
+</Note>
+
+## Fees
+
+`fee_bps` is set once at `init`, from 0 to 1,000 (10%). On a sale of `p` lamports:
+
+```
+fee    = p × fee_bps / 10,000      → treasury
+seller = p − fee                   → seller
+```
+
+With `fee_bps = 0` the treasury receives nothing and its transfer is skipped.
+
+## No royalties
+
+GL-36 has no royalty mechanism. A royalty would need an extra account and an extra transfer in every `buy`, and `transfer` would bypass it anyway: any sale can be settled off-chain followed by a free transfer. A collection that wants a cut of trading sets `fee_bps` and points `treasury` at itself.
+
+## Transfer
+
+`transfer` gives a token to another address for free. Only the owner can sign it. The price is cleared, so a listing doesn't follow the token to its new owner. Transferring to yourself fails with `SameOwner` (16).
+
+```ts
+await send(owner, [transferIx(PROGRAM, owner, COLLECTION, recipient, id)]);
+```
+
+## Not in version 1
+
+Bids, offers and collection-wide offers need escrowed SOL held by the program and are planned as a separate account in a later version.

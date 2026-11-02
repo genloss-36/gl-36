@@ -1,0 +1,58 @@
+name: SDK
+
+on:
+  push:
+    branches: [main]
+    tags: ["sdk-v*"]
+    paths:
+      - "packages/sdk/**"
+      - "generator/genloss-gen.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/sdk.yml"
+  pull_request:
+    paths:
+      - "packages/sdk/**"
+      - "generator/genloss-gen.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/sdk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm pack --dry-run -w @gl36/sdk
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/sdk-v')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Tag matches package version
+        run: test "sdk-v$(node -p "require('./packages/sdk/package.json').version")" = "${GITHUB_REF_NAME}"
+      - run: npm publish -w @gl36/sdk --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

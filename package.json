@@ -1,0 +1,18 @@
+{
+  "name": "gl-36",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/sdk",
+    "devnet"
+  ],
+  "scripts": {
+    "build": "npm run build -w @gl36/sdk",
+    "test": "npm test -w @gl36/sdk",
+    "typecheck": "npm run typecheck -w @gl36/sdk"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

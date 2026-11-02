@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GENLOSS generator</title>
+<style>
+  :root {
+    --bg: #111214; --panel: #1b1d21; --line: #2a2d33; --text: #e9e6df; --muted: #8d8a83;
+    --accent: #ffcf1a; --ok: #14f195; --bad: #ff4d4d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  header { padding: 16px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 18px; letter-spacing: .02em; }
+  h1 small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input, select, button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; }
+  input[type=number] { width: 90px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  main { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; align-content: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: pointer; }
+  .card:hover { border-color: var(--accent); }
+  .card canvas { display: block; width: 100%; aspect-ratio: 1; image-rendering: pixelated; }
+  .meta { padding: 8px 10px; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .id { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tier { font-weight: 600; font-size: 12px; text-align: right; }
+  .t-Lossless { color: #9fd3ff; } .t-Compressed { color: #c9c4b8; } .t-Crushed { color: #f5c8a0; }
+  .t-Mangled { color: #ff9b5a; } .t-Deep { color: #ff5a5a; } .t-Legendary { color: var(--accent); }
+  aside { display: flex; flex-direction: column; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .panel h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td { padding: 3px 0; } td:last-child { text-align: right; color: var(--muted); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .ua { color: var(--muted); font-size: 12px; word-break: break-word; margin-top: 6px; }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px; max-width: min(860px, 94vw); }
+  dialog::backdrop { background: #000a; }
+  .big { display: flex; flex-wrap: wrap; gap: 16px; }
+  .big canvas { width: min(512px, 84vw); aspect-ratio: 1; image-rendering: pixelated; border-radius: 6px; }
+  .traits { min-width: 220px; }
+  .traits dt { color: var(--muted); font-size: 12px; } .traits dd { margin: 0 0 6px; }
+  .hash { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); word-break: break-all; }
+  .status { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>GENLOSS <small id="ver"></small></h1>
+  <div class="controls">
+    <label>from id <input id="start" type="number" min="0" value="0"></label>
+    <select id="comp">
+      <option value="">all compositions</option>
+      <option>DCT Basis</option><option>Spectrum</option><option>Bitwise</option><option>Plasma</option><option>Geometry</option>
+      <option>Rings</option><option>Waves</option><option>Contours</option><option>Color Field</option><option>Grid</option>
+    </select>
+    <select id="tier">
+      <option value="">all compression</option>
+      <option>Lossless</option><option>Compressed</option><option>Crushed</option>
+      <option>Mangled</option><option>Deep Fried</option><option>Legendary</option>
+    </select>
+    <button id="prev">←</button>
+    <button id="next">→</button>
+    <span class="status" id="status"></span>
+  </div>
+</header>
+<main>
+  <section class="grid" id="grid"></section>
+  <aside>
+    <div class="panel">
+      <h2>Test vectors</h2>
+      <div id="vectors">checking…</div>
+      <div class="ua" id="ua"></div>
+    </div>
+    <div class="panel">
+      <h2>Rarity (ids 0–4999)</h2>
+      <table id="stats"></table>
+    </div>
+  </aside>
+</main>
+<dialog id="dlg">
+  <div class="big">
+    <canvas id="bigc" width="256" height="256"></canvas>
+    <div class="traits"><dl id="dl"></dl><p class="hash" id="dh"></p><button id="dl-png">Download PNG</button> <button id="close">Close</button></div>
+  </div>
+</dialog>
+<script type="module">
+import { VERSION, SIZE, generate, traits, previewSeed, sha256, hex, toRGBA } from "./genloss-gen.js";
+
+const PAGE = 24;
+const $ = (id) => document.getElementById(id);
+$("ver").textContent = VERSION;
+$("ua").textContent = navigator.userAgent;
+
+const tierClass = (name) => "t-" + name.split(" ")[0];
+const paint = (canvas, rgb) => canvas.getContext("2d").putImageData(new ImageData(toRGBA(rgb), SIZE, SIZE), 0, 0);
+const frame = () => new Promise((r) => setTimeout(r, 0));
+
+let shown = [], token = 0;
+
+const filtering = () => $("tier").value || $("comp").value;
+const matches = (id) => {
+  const t = traits(previewSeed(id));
+  return (!$("tier").value || t.compression === $("tier").value) && (!$("comp").value || t.composition === $("comp").value);
+};
+
+async function render() {
+  const my = ++token;
+  const start = Math.max(0, Number($("start").value) || 0);
+  const ids = [];
+  for (let id = start; ids.length < PAGE && id < start + 20000 && id <= 65535; id++) {
+    if (!filtering() || matches(id)) ids.push(id);
+  }
+  shown = ids;
+  const grid = $("grid");
+  grid.replaceChildren();
+  $("status").textContent = ids.length ? `ids ${ids[0]}–${ids[ids.length - 1]}` : "nothing found";
+  for (const id of ids) {
+    if (my !== token) return;
+    const out = generate(previewSeed(id));
+    const card = document.createElement("div");
+    card.className = "card";
+    const c = document.createElement("canvas");
+    c.width = c.height = SIZE;
+    paint(c, out.rgb);
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="id">#${id} · ${out.traits.composition}</span><span class="tier ${tierClass(out.traits.compression)}">${out.traits.compression}</span>`;
+    card.append(c, meta);
+    card.onclick = () => openBig(id, out);
+    grid.append(card);
+    await frame();
+  }
+}
+
+function openBig(id, out) {
+  paint($("bigc"), out.rgb);
+  const labels = { composition: "Composition", palette: "Palette", compression: "Compression", overlay: "Overlay", layer: "Overlay layer", glitch: "Glitch", chroma: "Chroma", mosh: "Mosh", generations: "JPEG generations", quality: "Avg quality" };
+  $("dl").innerHTML = `<dt>id</dt><dd>#${id}</dd>` + Object.entries(out.traits).map(([k, v]) => `<dt>${labels[k] ?? k}</dt><dd>${v}</dd>`).join("");
+  $("dh").textContent = "sha256(rgb) " + hex(sha256(out.rgb));
+  $("dl-png").onclick = () => $("bigc").toBlob((b) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = `genloss-${id}.png`;
+    a.click();
+  });
+  $("dlg").showModal();
+}
+$("close").onclick = () => $("dlg").close();
+
+$("prev").onclick = () => { $("start").value = Math.max(0, (shown[0] ?? 0) - (filtering() ? 1 : PAGE)); if (filtering()) backFill(); else render(); };
+$("next").onclick = () => { $("start").value = (shown[shown.length - 1] ?? 0) + 1; render(); };
+$("start").onchange = render;
+$("tier").onchange = render;
+$("comp").onchange = render;
+
+function backFill() {
+  let id = Number($("start").value), found = 0;
+  for (; id > 0 && found < PAGE; id--) if (matches(id)) found++;
+  $("start").value = id;
+  render();
+}
+
+async function checkVectors() {
+  try {
+    const { version, vectors } = await (await fetch("./vectors.json", { cache: "no-store" })).json();
+    if (version !== VERSION) { $("vectors").innerHTML = `<span class="bad">vectors.json is ${version}, generator is ${VERSION}</span>`; return; }
+    let ok = 0;
+    const bad = [];
+    for (const v of vectors) {
+      if (hex(sha256(generate(previewSeed(v.id)).rgb)) === v.sha256) ok++;
+      else bad.push(v.id);
+      await frame();
+    }
+    $("vectors").innerHTML = bad.length
+      ? `<span class="bad">${ok}/${vectors.length} match, differ: ${bad.join(", ")}</span>`
+      : `<span class="ok">${ok}/${vectors.length} byte-identical to Node</span>`;
+  } catch (e) {
+    $("vectors").innerHTML = `<span class="bad">could not load vectors.json: ${e.message}</span>`;
+  }
+}
+
+function stats() {
+  const tally = {}, comps = {};
+  const N = 5000;
+  for (let id = 0; id < N; id++) {
+    const t = traits(previewSeed(id));
+    tally[t.compression] = (tally[t.compression] ?? 0) + 1;
+    comps[t.composition] = (comps[t.composition] ?? 0) + 1;
+  }
+  const row = (k, n, cls = "") => `<tr><td class="${cls}">${k}</td><td>${n} · ${((n * 100) / N).toFixed(1)}%</td></tr>`;
+  const order = ["Lossless", "Compressed", "Crushed", "Mangled", "Deep Fried", "Legendary"];
+  $("stats").innerHTML =
+    order.map((t) => row(t, tally[t] ?? 0, tierClass(t))).join("") +
+    `<tr><td colspan="2">&nbsp;</td></tr>` +
+    Object.entries(comps).sort((a, b) => b[1] - a[1]).map(([k, n]) => row(k, n)).join("");
+}
+
+await render();
+stats();
+checkVectors();
+</script>
+</body>
+</html>

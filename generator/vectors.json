@@ -1,0 +1,223 @@
+{
+  "version": "genloss-gen/4",
+  "seed": "previewSeed(id)",
+  "hash": "sha256(rgb)",
+  "vectors": [
+    {
+      "id": 0,
+      "composition": "Plasma",
+      "compression": "Deep Fried",
+      "sha256": "49e2209900d8a0b84faae695308f7b96e65ab7aa96286152c523296a9c2fceb4"
+    },
+    {
+      "id": 1,
+      "composition": "Plasma",
+      "compression": "Legendary",
+      "sha256": "4b52f1ebca64bf619b4bd7afedd9e81a340f95422dd14921f66521ed251f6b18"
+    },
+    {
+      "id": 2,
+      "composition": "Spectrum",
+      "compression": "Mangled",
+      "sha256": "e1114c0ba565941902d604b02c946e487690c43583b6b469520e19f5a2d9af0a"
+    },
+    {
+      "id": 3,
+      "composition": "Spectrum",
+      "compression": "Mangled",
+      "sha256": "dd07be0b37bf22cdc53188a8c05d02d0b62949a62953bd3b6e7fb39d27b15151"
+    },
+    {
+      "id": 4,
+      "composition": "Bitwise",
+      "compression": "Legendary",
+      "sha256": "7c1d35cfa3d09947bfaccf6ac469d62b21482f8bedf35fb24e9cdadf51526f19"
+    },
+    {
+      "id": 5,
+      "composition": "Plasma",
+      "compression": "Compressed",
+      "sha256": "2933e933a7bf97ce889495e6c6fc4f6a7eb2f93780df25ac3a297ec49c35891f"
+    },
+    {
+      "id": 6,
+      "composition": "Bitwise",
+      "compression": "Mangled",
+      "sha256": "ae1bf8809c756674e2f4222d51655c4ebe2fff449ea521f98eb85077bce88d79"
+    },
+    {
+      "id": 7,
+      "composition": "Waves",
+      "compression": "Mangled",
+      "sha256": "91e5928585b5703e9fd47a643d6ac43e813b328dec73118e46adb085603eb196"
+    },
+    {
+      "id": 8,
+      "composition": "Rings",
+      "compression": "Crushed",
+      "sha256": "6951273772594b936dd6e63d99e01db9434c5f71d3666fe2e67062e262adf912"
+    },
+    {
+      "id": 9,
+      "composition": "DCT Basis",
+      "compression": "Deep Fried",
+      "sha256": "1c999eb3467a40f1de94fdfead7b75a9d531c79f6621af55076df5a1bd7d1f58"
+    },
+    {
+      "id": 10,
+      "composition": "DCT Basis",
+      "compression": "Compressed",
+      "sha256": "948cc3739944a64a504dbfe753264b51c2255559b5eb27f37744d489885e4868"
+    },
+    {
+      "id": 11,
+      "composition": "Plasma",
+      "compression": "Compressed",
+      "sha256": "6f69b9b2637999a0a0ff1bda98fe0d8b7a056fcf4ed6c648e5d7e3c3d139d2f9"
+    },
+    {
+      "id": 12,
+      "composition": "Contours",
+      "compression": "Crushed",
+      "sha256": "4ed8ad9488daa83b4ba88e583d02b8d4198f41592bff9ae2ce8024a9c16c4c69"
+    },
+    {
+      "id": 13,
+      "composition": "Spectrum",
+      "compression": "Compressed",
+      "sha256": "0fc99b7c460d049857c526bce8dfe544bd2b2db2a7e07e6ff718eb908d0c8b21"
+    },
+    {
+      "id": 14,
+      "composition": "Grid",
+      "compression": "Crushed",
+      "sha256": "647a60cca80f2cc76faa3f0b26e8bf13d5b654f9638a7da918ea35c1a43aad27"
+    },
+    {
+      "id": 15,
+      "composition": "Grid",
+      "compression": "Deep Fried",
+      "sha256": "967b6788489f4d71d8f24ac005178032209cc1337fe2037e7ef04c2647abfc70"
+    },
+    {
+      "id": 16,
+      "composition": "Plasma",
+      "compression": "Crushed",
+      "sha256": "78c5e172a99d2730d959fbbbfefa009a4da09382de8f643396e4663db9668043"
+    },
+    {
+      "id": 17,
+      "composition": "Waves",
+      "compression": "Mangled",
+      "sha256": "aa001159ccfc610a93f8a7405d76f31e447ad2d3943ef39a9ae23c37f6b5242f"
+    },
+    {
+      "id": 18,
+      "composition": "Color Field",
+      "compression": "Compressed",
+      "sha256": "e63379b4dbda3a4db3ef5dd1dc77c13a252a7331b1323c6c7d0a47ad2299a647"
+    },
+    {
+      "id": 19,
+      "composition": "Spectrum",
+      "compression": "Lossless",
+      "sha256": "9c7ea56d2870cefe5d44353645f55439964179ad11c95365e2e4c2c3808a4cca"
+    },
+    {
+      "id": 20,
+      "composition": "Geometry",
+      "compression": "Crushed",
+      "sha256": "8d4edff24747082add52ece2bc682c798071280e082a992f68975425b0e15572"
+    },
+    {
+      "id": 21,
+      "composition": "Waves",
+      "compression": "Deep Fried",
+      "sha256": "21162a1e2b8580d23cb1b981358688c6cd1c3fa91b48fb3b92cc17f37f1e1635"
+    },
+    {
+      "id": 22,
+      "composition": "Plasma",
+      "compression": "Crushed",
+      "sha256": "2727778949d84dadc06e9f7f69f7fefb8618d76e4741b2f65ca093a795354126"
+    },
+    {
+      "id": 23,
+      "composition": "Rings",
+      "compression": "Lossless",
+      "sha256": "bc55d2850933649056358c7ab3b3ff60da9303eca084c00490f74f8d1ffa182b"
+    },
+    {
+      "id": 24,
+      "composition": "Waves",
+      "compression": "Legendary",
+      "sha256": "0930d3eafcd560d89c4ebf99eca11e9434aa6d8611a4bd73b63124df5f7333bd"
+    },
+    {
+      "id": 25,
+      "composition": "Spectrum",
+      "compression": "Mangled",
+      "sha256": "1bcecb13f5f552853f278e96227fd157cf9f171b126f194e2c5f32a74f57ae3b"
+    },
+    {
+      "id": 26,
+      "composition": "DCT Basis",
+      "compression": "Mangled",
+      "sha256": "666614730cf71f08e3c06565843c0ce1e7e94895f68dd1c647fbea1ecca98d6f"
+    },
+    {
+      "id": 27,
+      "composition": "Bitwise",
+      "compression": "Compressed",
+      "sha256": "3b526d5a84f3e1b5d4e273407934f9248f33a8954839661896fec7a7eb50d8cf"
+    },
+    {
+      "id": 28,
+      "composition": "Plasma",
+      "compression": "Crushed",
+      "sha256": "e4a26d54814e99f2d3e17df77ffcb22614667dd1cb7bc11cd80b251cd28628cc"
+    },
+    {
+      "id": 29,
+      "composition": "DCT Basis",
+      "compression": "Lossless",
+      "sha256": "1748d0c333afb5f8926faef5de845bb453b6ebfae798f4ab789645ded5704b04"
+    },
+    {
+      "id": 30,
+      "composition": "Spectrum",
+      "compression": "Mangled",
+      "sha256": "4a8c65b7d5163939206686adec49865957a4aa2198c61f6f0fdcc322e5313914"
+    },
+    {
+      "id": 31,
+      "composition": "Grid",
+      "compression": "Crushed",
+      "sha256": "f5bfb32625eb65202195a344daaede6750d81b7820828d6af1c76900a4b762f2"
+    },
+    {
+      "id": 32,
+      "composition": "Spectrum",
+      "compression": "Compressed",
+      "sha256": "74ec1543ca93593b2858c7646f29b55d025a35c50ae1d0c721204f0a5f260f3d"
+    },
+    {
+      "id": 33,
+      "composition": "Rings",
+      "compression": "Crushed",
+      "sha256": "f4c29e25903ceb5e5774a2257b05b7f94b9b515d0d24e29cdd1d35021f5f12ec"
+    },
+    {
+      "id": 34,
+      "composition": "Plasma",
+      "compression": "Crushed",
+      "sha256": "a9acb37748ce24d2cf7de6c7b9a62516fa5618dc383d0312745e146e2db57705"
+    },
+    {
+      "id": 35,
+      "composition": "Spectrum",
+      "compression": "Deep Fried",
+      "sha256": "f3a3de411589109e2467bb8ae6fa11a0a9cc06abe3cf8945ee3cb26fe222ec98"
+    }
+  ]
+}

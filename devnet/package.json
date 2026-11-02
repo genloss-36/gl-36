@@ -1,0 +1,17 @@
+{
+  "name": "gl36-devnet",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "e2e": "node --conditions=source scripts/devnet-e2e.ts",
+    "seed": "node --conditions=source scripts/seed-demo.ts"
+  },
+  "dependencies": {
+    "@gl36/sdk": "*",
+    "@solana/kit": "8.5.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

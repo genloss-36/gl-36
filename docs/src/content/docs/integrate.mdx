@@ -1,0 +1,90 @@
+---
+title: Integrate a wallet or marketplace
+nav: Integrate
+description: Show GL-36 tokens, keep them fresh without an indexer, and build purchases that can't overpay.
+---
+
+import Note from "../../components/Note.astro";
+
+Integrating GL-36 means reading one account per collection and decoding a fixed layout. There is no metadata standard to resolve and no indexer to run.
+
+## Recognize a collection
+
+An account is a GL-36 collection when all of these hold:
+
+- its owner is the GL-36 program;
+- byte 0 is `0x01` and byte 1 is `0x01`;
+- its length equals `224 + minted × 36`, with `minted` read from bytes 6–7.
+
+`decodeCollection` checks the tag and version and throws otherwise.
+
+## Tokens owned by a wallet
+
+Keep a list of collections you support, read them, and filter slots by owner:
+
+```ts
+import { decodeCollection, slotsOwnedBy } from "@gl36/sdk";
+
+async function owned(collections: Address[], wallet: Address) {
+  const { value } = await rpc
+    .getMultipleAccounts(collections, { encoding: "base64", commitment: "confirmed" })
+    .send();
+  return value.flatMap((acc, i) => {
+    if (!acc) return [];
+    const col = decodeCollection(new Uint8Array(Buffer.from(acc.data[0], "base64")));
+    return slotsOwnedBy(col, wallet).map((s) => ({ collection: collections[i], id: s.id, listed: s.price > 0 }));
+  });
+}
+```
+
+`getMultipleAccounts` reads up to 100 collections in one request. For a single collection, `fetchCollection` does the read and the decoding in one call.
+
+To discover collections you don't know about, list the program's accounts: `getProgramAccounts` with a `memcmp` filter on byte 0 = `0x01`, or a `dataSlice` of the first 224 bytes to fetch headers only.
+
+## Keep state fresh
+
+The account is the state. Two ways to follow it:
+
+- **Polling.** Re-read with `getAccountInfo` every few seconds and after each transaction you send. A 5,000-token collection is about 180 KB.
+- **Subscription.** `accountSubscribe` over WebSocket pushes the new bytes on every change.
+
+To show history — who minted, who sold at what price — read the program logs of the collection's transactions with `getSignaturesForAddress` and `getTransaction`. See [Logs](/docs/logs/).
+
+## Floor and listings
+
+```ts
+const listed = col.slots.filter((s) => s.price > 0).sort((a, b) => a.price - b.price);
+const floor = listed[0] ? Number(BigInt(listed[0].price) * PRICE_UNIT) / 1e9 : null;
+```
+
+## Build a safe purchase
+
+Always pass the owner and price you displayed to the user. If either changed by the time the transaction runs, it fails with `SellerMismatch` (6) or `PriceAboveMax` (5) instead of paying more.
+
+```ts
+const s = col.slots[id];
+const ix = buyIx(PROGRAM, buyer, COLLECTION, s.owner, col.treasury, id, s.price);
+```
+
+The buyer must hold the price plus the network fee. The market fee comes out of the price, not on top of it.
+
+## Show content
+
+Before reveal (`flags & 1 === 0`), show a placeholder: content does not exist yet. After reveal, compute the seed from the header and the id, run the collection's generator, and check the generator file against `generator_hash` before trusting its output. See [Provenance and reveal](/docs/provenance/).
+
+## Explain errors
+
+Program errors arrive as `custom program error: 0x…` inside a kit `SolanaError` or the simulation logs. `parseProgramError` finds the code wherever it is and names it. Pass `programId` so an error raised by another program, such as the System Program's insufficient funds, isn't mistaken for one of GL-36's.
+
+```ts
+import { PROGRAM_ID, parseProgramError } from "@gl36/sdk";
+
+const err = parseProgramError(e, { programId: PROGRAM_ID.devnet });
+if (err?.name === "SellerMismatch") showMessage("This token was just sold or moved. Refresh and try again.");
+```
+
+The full table is in [Errors](/docs/errors/).
+
+<Note>
+  Every write goes to the same account, so two transactions on one collection in the same block are ordered by the leader. A failed <code>buy</code> because someone else bought first is expected behaviour, not an error to retry blindly.
+</Note>

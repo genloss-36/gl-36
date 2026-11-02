@@ -1,0 +1,40 @@
+---
+title: Errors
+description: Custom error codes of the GL-36 program and the built-in Solana errors it returns.
+---
+
+GL-36 returns `ProgramError::Custom(code)` for its own conditions. In transaction logs and RPC errors they appear as `custom program error: 0x…` in hexadecimal. The SDK exports the same table as `ERR`, and `parseProgramError` finds and names the code in a failed send. See [TypeScript SDK](/docs/client/#logs-and-errors).
+
+| Code | Hex | Name | Returned when |
+| ---: | ---: | --- | --- |
+| 1 | `0x1` | `SoldOut` | `minted + count` would exceed `max_supply`. |
+| 2 | `0x2` | `BadBatch` | `count` is 0 or more than 10. |
+| 3 | `0x3` | `NotOwner` | The signer doesn't own the slot (`transfer`, `list`). |
+| 4 | `0x4` | `NotListed` | `buy` on a slot whose price is 0. |
+| 5 | `0x5` | `PriceAboveMax` | The ask is higher than the buyer's `max_price`. |
+| 6 | `0x6` | `SellerMismatch` | The seller passed to `buy` no longer owns the slot. |
+| 7 | `0x7` | `SelfBuy` | Buyer and seller are the same address. |
+| 8 | `0x8` | `BadSecret` | `sha256(secret)` doesn't match `provenance`. |
+| 9 | `0x9` | `AlreadyRevealed` | `reveal` on a revealed collection. |
+| 10 | `0xa` | `MintClosed` | `mint` after the mint closed. |
+| 11 | `0xb` | `BadFee` | `fee_bps` above 1,000 at `init`. |
+| 12 | `0xc` | `BadSupply` | `max_supply` of 0 at `init`. |
+| 13 | `0xd` | `WrongCreator` | The creator account doesn't match the header. |
+| 14 | `0xe` | `WrongTreasury` | The treasury account doesn't match the header. |
+| 15 | `0xf` | `BadId` | `id` is not below `minted`. |
+| 16 | `0x10` | `SameOwner` | `transfer` to the current owner. |
+| 17 | `0x11` | `BadSysvar` | The SlotHashes account is wrong or empty. |
+
+## Built-in errors
+
+| Error | Returned when |
+| --- | --- |
+| `InvalidInstructionData` | Unknown tag, or data of the wrong length. |
+| `NotEnoughAccountKeys` | Fewer accounts than the instruction needs. |
+| `MissingRequiredSignature` | The owner, buyer, minter or creator didn't sign. |
+| `InvalidAccountOwner` | The collection account isn't owned by the GL-36 program. |
+| `Immutable` | The collection account wasn't passed as writable. |
+| `InvalidAccountData` | Wrong tag or version, or the length doesn't match `minted`. |
+| `InvalidSeeds` | `init` with an address that isn't the creator's PDA for the nonce. |
+
+Insufficient funds surface as System Program errors from the transfer CPIs inside `init`, `mint` and `buy`.

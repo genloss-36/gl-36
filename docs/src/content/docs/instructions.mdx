@@ -1,0 +1,163 @@
+---
+title: Instructions
+description: Data layout, accounts and checks for the seven instructions of the GL-36 program.
+---
+
+import Note from "../../components/Note.astro";
+
+The first byte of instruction data is the tag. Arguments follow, little-endian, with no padding. Data shorter or longer than listed fails with `InvalidInstructionData`.
+
+In the account tables, **W** is writable and **S** is signer. Accounts must be passed in the order shown.
+
+| Tag | Instruction | Data | Signer |
+| ---: | --- | ---: | --- |
+| 0 | [`init`](#init) | 81 B | creator |
+| 1 | [`mint`](#mint) | 2 B | minter |
+| 2 | [`transfer`](#transfer) | 3 B | owner |
+| 3 | [`list`](#list) | 7 B | owner |
+| 4 | [`buy`](#buy) | 7 B | buyer |
+| 5 | [`reveal`](#reveal) | 33 B | creator |
+| 6 | [`withdraw_excess`](#withdraw_excess) | 1 B | creator |
+
+Every instruction except `init` first checks that the collection account is owned by the program, is writable, has tag and version `1`, and that its length is `224 + minted × 36`.
+
+## init
+
+Creates a collection account at the PDA `["col", creator, nonce]` with a 224-byte header.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `0` |
+| 1 | 4 | `nonce` u32 |
+| 5 | 2 | `max_supply` u16 |
+| 7 | 2 | `fee_bps` u16 |
+| 9 | 8 | `mint_price` u64 |
+| 17 | 32 | `provenance` |
+| 49 | 32 | `generator_hash` |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | creator | W S | pays rent for the header |
+| 1 | collection | W | the PDA, empty |
+| 2 | treasury | | stored in the header |
+| 3 | System Program | | |
+
+Fails with `BadSupply` (12) if `max_supply` is 0, `BadFee` (11) if `fee_bps` > 1,000, `InvalidSeeds` if the collection isn't the PDA for this creator and nonce. Logs `init <max_supply>`.
+
+## mint
+
+Mints `count` tokens to the signer. Grows the account by `count × 36` bytes.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `1` |
+| 1 | 1 | `count` u8, 1 to 10 |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | minter | W S | pays price and rent, becomes owner |
+| 1 | collection | W | |
+| 2 | creator | W | must match the header, receives the price |
+| 3 | SlotHashes sysvar | | `SysvarS1otHashes111111111111111111111111111` |
+| 4 | System Program | | |
+
+1. Transfers `max(0, rent_min(new_len) − lamports)` from the minter to the collection.
+2. Transfers `mint_price × count` from the minter to the creator, if non-zero.
+3. Resizes the account and writes the minter as owner of each new slot, with price `0`.
+4. If `minted` reaches `max_supply`, writes the latest slot hash as `entropy` and sets `CLOSED`.
+
+Fails with `BadBatch` (2), `WrongCreator` (13), `MintClosed` (10), `SoldOut` (1), and `BadSysvar` (17) on the mint that closes the collection. Logs `mint <first_id> <count>`.
+
+## transfer
+
+Gives a token to another address and clears its price.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `2` |
+| 1 | 2 | `id` u16 |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | owner | S | current owner |
+| 1 | collection | W | |
+| 2 | new owner | | any address |
+
+Fails with `SameOwner` (16), `BadId` (15), `NotOwner` (3). Logs `xfer <id>`.
+
+## list
+
+Sets or clears the ask of a token.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `3` |
+| 1 | 2 | `id` u16 |
+| 3 | 4 | `price` u32, units of 1,000 lamports, `0` delists |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | owner | S | current owner |
+| 1 | collection | W | |
+
+Fails with `BadId` (15), `NotOwner` (3). Logs `list <id> <price>`.
+
+## buy
+
+Buys a listed token at its ask.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `4` |
+| 1 | 2 | `id` u16 |
+| 3 | 4 | `max_price` u32, units of 1,000 lamports |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | buyer | W S | pays the price |
+| 1 | collection | W | |
+| 2 | seller | W | must be the slot's owner |
+| 3 | treasury | W | must match the header |
+| 4 | System Program | | |
+
+Transfers `price × 1,000 − fee` lamports to the seller and `fee = price × 1,000 × fee_bps / 10,000` to the treasury, then sets the owner to the buyer and the price to `0`.
+
+Fails with `SelfBuy` (7), `BadId` (15), `SellerMismatch` (6), `WrongTreasury` (14), `NotListed` (4), `PriceAboveMax` (5). Logs `buy <id> <price>`.
+
+## reveal
+
+Publishes the secret. Closes the mint first if it is still open.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `5` |
+| 1 | 32 | `secret` |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | creator | S | must match the header |
+| 1 | collection | W | |
+| 2 | SlotHashes sysvar | | |
+
+Checks `sha256(secret) == provenance`, writes `secret` and sets `REVEALED`. If `CLOSED` is not set, also writes `entropy`, sets `CLOSED` and lowers `max_supply` to `minted`.
+
+Fails with `WrongCreator` (13), `AlreadyRevealed` (9), `BadSecret` (8), `BadSysvar` (17). Logs `reveal`.
+
+## withdraw_excess
+
+Moves lamports above the rent-exempt minimum to the creator.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `6` |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | creator | W S | must match the header |
+| 1 | collection | W | |
+
+Sets the collection's balance to exactly `rent_min(len)` by editing lamports directly — the program owns the account, so no CPI is needed. Fails with `WrongCreator` (13). Logs `withdraw <lamports>`.
+
+<Note>
+  Several instructions may share a transaction, including instructions on different collections. A transaction fails as a whole if any of them fails.
+</Note>

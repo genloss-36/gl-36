@@ -1,0 +1,375 @@
+---
+import Base from "../layouts/Base.astro";
+import CostCalculator from "../components/CostCalculator.astro";
+import SlotDiagram from "../components/SlotDiagram.astro";
+import { FEATURED, explorerAddress } from "../lib/config";
+
+const principles = [
+  {
+    t: "Storage is the product",
+    d: "A token is the smallest record that can still be traded: who owns it and what they ask. Everything else is derived off-chain from public, hashed inputs.",
+  },
+  {
+    t: "The account is the API",
+    d: "One getAccountInfo returns the full state. Wallets and marketplaces decode a fixed layout; there is nothing to index and nothing to trust in between.",
+  },
+  {
+    t: "Trading is built in",
+    d: "Listing, buying and transferring are instructions of the same program. A purchase checks the seller and a maximum price, so a stale listing can't be filled at a new price.",
+  },
+  {
+    t: "Rent goes back",
+    d: "Rent is read from the Rent sysvar at the moment of each operation. When Solana lowers it, withdraw_excess returns the difference to the creator.",
+  },
+];
+---
+
+<Base description="GL-36 is an NFT standard for Solana where a token takes 36 bytes. A whole collection lives in one account, with trading built into the program." current="home">
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="field" data-hero data-address={FEATURED?.address}>
+        <canvas aria-hidden="true"></canvas>
+      </div>
+      <div class="hero-copy wide">
+        <h1 class="display hero-title" id="hero-title">
+          <span class="ln"><span>An NFT</span></span>
+          <span class="ln"><span>is 36 bytes</span></span>
+        </h1>
+        <div class="hero-side">
+          <p class="caption" role="status">
+            <span class="dot" data-live hidden></span><span data-status>Reading a collection account…</span>
+          </p>
+          <p class="readout" data-readout aria-hidden="true">Point at a byte to decode it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="intro wide">
+      <p class="statement">
+        GL-36 stores a whole NFT collection in a single Solana account. Each token is a 36-byte slot:{" "}
+        <span class="dim">32 bytes for the owner, 4 bytes for the price. Minting, trading and transfers are instructions of one program.</span>
+      </p>
+      <div class="cta">
+        <a class="btn" href="/docs/">Read the docs</a>
+        <a class="btn ghost" href="/docs/quickstart/">Quickstart</a>
+      </div>
+    </section>
+
+    <section class="block wide" aria-labelledby="cost-title">
+      <div class="block-head">
+        <h2 class="title" id="cost-title">48× less rent</h2>
+        <p class="lead">
+          Rent is what an NFT costs to exist on Solana. A classic Token Metadata NFT spreads over four accounts and 1,720
+          bytes. A GL-36 token is 36 bytes inside an account that already exists.
+        </p>
+      </div>
+      <CostCalculator />
+      <p class="foot-note">
+        Classic NFT: mint (82 B), token account (165 B), metadata (679 B) and master edition (282 B), plus 128 B of
+        overhead per account. Rates are Solana's rent-exempt minimum per byte before and after the SIMD-0437 cuts.{" "}
+        <a href="/docs/rent/">How rent is calculated</a>
+      </p>
+    </section>
+
+    <section class="block wide" aria-labelledby="anatomy-title">
+      <div class="block-head">
+        <h2 class="title" id="anatomy-title">One slot.<br />Thirty-six bytes</h2>
+      </div>
+      <div class="panel">
+        <SlotDiagram />
+      </div>
+    </section>
+
+    <section class="block wide" aria-labelledby="principles-title">
+      <div class="block-head">
+        <h2 class="title" id="principles-title">Four rules</h2>
+      </div>
+      <ul class="principles">
+        {
+          principles.map((p) => (
+            <li>
+              <h3>{p.t}</h3>
+              <p>{p.d}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="closing wide">
+      <h2 class="display">Start<br />building</h2>
+      <div class="closing-links">
+        <a href="/docs/quickstart/"><span>Quickstart</span><span class="sub">Read and mint in a few lines of TypeScript.</span></a>
+        <a href="/docs/instructions/"><span>Reference</span><span class="sub">Every instruction, account and error code.</span></a>
+        <a href="/inspector/"><span>Inspector</span><span class="sub">Decode any GL-36 collection account.</span></a>
+      </div>
+      {FEATURED && <a class="sr-only" href={explorerAddress(FEATURED.address)}>Featured collection on Solana Explorer</a>}
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { ByteField, sampleAccount } from "../lib/bytefield";
+  import { fetchCollection } from "../lib/chain";
+  import { describe } from "../lib/describe";
+  import { int } from "../lib/format";
+
+  const box = document.querySelector<HTMLElement>("[data-hero]")!;
+  const status = document.querySelector<HTMLElement>("[data-status]")!;
+  const readout = document.querySelector<HTMLElement>("[data-readout]")!;
+  const live = document.querySelector<HTMLElement>("[data-live]")!;
+  const IDLE = readout.textContent ?? "";
+  const field = new ByteField(box.querySelector("canvas")!, {
+    mode: "fill",
+    minCell: 22,
+    onHover: (h, col) => {
+      readout.textContent = h ? describe(h, col) : IDLE;
+      readout.toggleAttribute("data-on", !!h);
+    },
+  });
+
+  async function load() {
+    const address = box.dataset.address;
+    try {
+      if (!address) throw new Error("no collection configured");
+      const acc = await fetchCollection(address);
+      field.set(acc.data);
+      live.hidden = false;
+      status.textContent = `A live devnet collection: ${int(acc.data.length)} bytes, ${int(acc.col.minted)} tokens.`;
+    } catch {
+      field.set(sampleAccount());
+      live.hidden = true;
+      status.textContent = "A sample collection account. Devnet didn't answer.";
+    }
+  }
+  load();
+  setInterval(() => {
+    if (document.visibilityState === "visible" && !live.hidden) load();
+  }, 30_000);
+</script>
+
+<style>
+  .hero {
+    position: relative;
+    height: calc(100svh - var(--header-h));
+    min-height: 560px;
+    max-height: 1100px;
+    overflow: hidden;
+  }
+  .field {
+    position: absolute;
+    inset: 0;
+    color: var(--field-ink);
+    --ink-lit: var(--fg);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 34%, rgb(0 0 0 / 0.14) 70%, rgb(0 0 0 / 0.08) 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 34%, rgb(0 0 0 / 0.14) 70%, rgb(0 0 0 / 0.08) 100%);
+  }
+  .field canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: pan-y;
+  }
+  .hero-copy {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+    padding-bottom: clamp(24px, 4vw, 48px);
+    pointer-events: none;
+  }
+  .hero-side {
+    flex: 0 1 360px;
+    padding-bottom: 6px;
+    animation: appear 0.6s var(--ease) 0.55s both;
+  }
+
+  .hero-title .ln {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.22em;
+    margin-bottom: -0.22em;
+  }
+  .hero-title .ln > span {
+    display: inline-block;
+    animation: rise var(--spring-slow-dur) var(--spring-slow) 0.12s both;
+  }
+  .hero-title .ln + .ln > span {
+    animation-delay: 0.21s;
+  }
+  @keyframes rise {
+    from {
+      transform: translateY(104%);
+    }
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
+  }
+  .caption {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--fg-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .caption .dot {
+    transform: translateY(-1px);
+  }
+  .readout {
+    min-height: 18px;
+    margin: 4px 0 0 14px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.2s var(--ease);
+  }
+  .readout[data-on] {
+    color: var(--fg);
+  }
+
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 48px;
+    align-items: end;
+    padding-top: clamp(72px, 10vw, 144px);
+    padding-bottom: clamp(24px, 4vw, 40px);
+  }
+  .statement {
+    margin: 0;
+    max-width: 22em;
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3.6vw, 48px);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.028em;
+  }
+  .dim {
+    color: var(--fg-3);
+  }
+  .cta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .block {
+    padding-top: clamp(96px, 12vw, 176px);
+  }
+  .block-head {
+    display: grid;
+    gap: 20px;
+    margin-bottom: clamp(32px, 4vw, 56px);
+  }
+  .block-head .lead {
+    max-width: 34em;
+  }
+  .panel {
+    padding: clamp(24px, 4vw, 48px);
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+  }
+  .foot-note {
+    max-width: 56em;
+    margin: 20px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fg-3);
+  }
+  .foot-note a {
+    color: var(--fg-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-strong);
+  }
+
+  .principles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 64px;
+  }
+  .principles li {
+    padding: 32px 0 40px;
+    border-top: 1px solid var(--line);
+  }
+  .principles h3 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.022em;
+  }
+  .principles p {
+    margin: 0;
+    max-width: 30em;
+    font-size: 16px;
+    color: var(--fg-2);
+  }
+
+  .closing {
+    padding-top: clamp(120px, 14vw, 220px);
+  }
+  .closing-links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: clamp(40px, 5vw, 72px);
+    border-top: 1px solid var(--line);
+  }
+  .closing-links a {
+    display: grid;
+    gap: 6px;
+    padding: 28px 24px 8px 0;
+    font-size: clamp(24px, 2.4vw, 32px);
+    font-weight: 600;
+    letter-spacing: -0.024em;
+    transition: opacity 0.2s var(--ease);
+  }
+  .closing-links a:hover {
+    opacity: 0.6;
+  }
+  .closing-links .sub {
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg-2);
+  }
+
+  @media (max-width: 960px) {
+    .intro {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .principles {
+      grid-template-columns: 1fr;
+    }
+    .closing-links {
+      grid-template-columns: 1fr;
+    }
+    .closing-links a {
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+  @media (max-width: 960px) {
+    .hero-copy {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .hero-side {
+      flex: none;
+    }
+  }
+</style>

@@ -1,0 +1,54 @@
+---
+title: Slots
+description: A token is a 36-byte slot — 32 bytes of owner and 4 bytes of price. Its id is its position in the account.
+---
+
+import SlotDiagram from "../../components/SlotDiagram.astro";
+import Note from "../../components/Note.astro";
+
+<SlotDiagram account={false} />
+
+## Id
+
+A token's id is its index: the first token minted is `0`, the next `1`, and so on up to `minted − 1`. Ids are never reused or reordered — slots are only appended, never removed. Instructions that take an id fail with `BadId` (15) if `id ≥ minted`.
+
+Together with the collection address, the id identifies a token everywhere:
+
+```
+<collection address>/<id>
+```
+
+## Owner
+
+The owner is a 32-byte public key: a wallet, a multisig, or a program-derived address. A slot always has an owner — the minter at first, then whoever it was sold or transferred to. There is no burn instruction in version 1.
+
+## Price
+
+The price is a `u32` ask in units of 1,000 lamports:
+
+| Stored value | Ask |
+| ---: | --- |
+| `0` | not listed |
+| `1` | 0.000001 SOL |
+| `250_000` | 0.25 SOL |
+| `4_294_967_295` | ≈ 4,294.97 SOL, the maximum |
+
+Four bytes instead of eight is what keeps a slot at 36 bytes. A thousand lamports is far below any meaningful price step, and the ceiling is high enough for any NFT that rent matters for.
+
+The price resets to `0` whenever the owner changes — after a `buy` and after a `transfer` — so a listing never survives a change of hands.
+
+```ts
+import { priceToLamports, priceToSol, solToPrice } from "@gl36/sdk";
+
+priceToLamports(slot.price); // 250_000 → 250_000_000n
+solToPrice("0.25");          // 250_000
+priceToSol(250_000);         // "0.25"
+```
+
+## What a slot doesn't hold
+
+No name, no URI, no attributes, no creator list. Content is computed off-chain from the collection's header and the id, so it doesn't need a byte per token. See [Provenance and reveal](/docs/provenance/).
+
+<Note>
+  Because the whole collection is one account, the program writes to one place for every operation. Solana allows 12M compute units per writable account per block; at about 3,000 CU per mint or buy that is roughly 4,000 operations on one collection per block.
+</Note>
