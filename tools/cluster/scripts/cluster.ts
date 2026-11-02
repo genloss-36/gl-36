@@ -22,8 +22,7 @@ import { SYSTEM_PROGRAM, decodeCollection } from "@gl-36/sdk";
 export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
 export const RPC_URL = process.env.RPC_URL ?? PUBLIC_RPC;
 export const local = RPC_URL.includes("127.0.0.1") || RPC_URL.includes("localhost");
-export const explorer = (sig: string) =>
-  `https://explorer.solana.com/tx/${sig}` + (local ? `?cluster=custom&customUrl=${encodeURIComponent(RPC_URL)}` : "");
+export const explorer = (sig: string) => (local ? sig : `https://solscan.io/tx/${sig}`);
 
 export const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 export const loadKey = (p: string) =>

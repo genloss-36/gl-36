@@ -3,7 +3,7 @@
 [![@gl-36/sdk](https://img.shields.io/npm/v/@gl-36/sdk?label=%40gl-36%2Fsdk&color=black)](https://www.npmjs.com/package/@gl-36/sdk)
 [![SDK CI](https://github.com/genloss-36/gl-36/actions/workflows/sdk.yml/badge.svg)](https://github.com/genloss-36/gl-36/actions/workflows/sdk.yml)
 [![Verified build](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fverify.osec.io%2Fstatus%2FGtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb&query=%24.is_verified&label=verified%20build&color=black)](https://verify.osec.io/status/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb)
-[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-black?logo=solana&logoColor=white)](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb)
+[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-black?logo=solana&logoColor=white)](https://solscan.io/account/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb)
 [![skills.sh](https://skills.sh/b/genloss-36/gl-36)](https://skills.sh/genloss-36/gl-36)
 [![Docs](https://img.shields.io/badge/docs-gl36.org-black)](https://gl36.org)
 [![License: MIT](https://img.shields.io/github/license/genloss-36/gl-36?color=black)](LICENSE)
@@ -78,7 +78,7 @@ npm install && npm test
 
 ## Mainnet
 
-Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb). Every collection on it is listed in [`deployments/mainnet.json`](deployments/mainnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
+Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://solscan.io/account/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb). Every collection on it is listed in [`deployments/mainnet.json`](deployments/mainnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
 
 To deploy your own copy, put the deployer keypair in `.keys/deployer.json` (the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run launch -w genloss`. Set `RPC_URL` to use another endpoint.
 

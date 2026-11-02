@@ -35,5 +35,5 @@ export function setRpcUrl(url: string) {
   }
 }
 
-export const explorerTx = (sig: string) => `https://explorer.solana.com/tx/${sig}`;
-export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}`;
+export const explorerTx = (sig: string) => `https://solscan.io/tx/${sig}`;
+export const explorerAddress = (a: string) => `https://solscan.io/account/${a}`;

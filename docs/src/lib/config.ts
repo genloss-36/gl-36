@@ -31,7 +31,7 @@ export const GENLOSS_URL = PROJECTS.genloss?.site ?? "https://genloss.gl36.org";
 export const FEATURED: KnownCollection | undefined =
   COLLECTIONS.find((c) => c.project === "genloss" && c.id === "genesis") ?? COLLECTIONS[0];
 
-export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}`;
+export const explorerAddress = (a: string) => `https://solscan.io/account/${a}`;
 
 export const RENT = { now: 5_080, afterCuts: 696 } as const;
 export const ACCOUNT_OVERHEAD = 128;
