@@ -39,6 +39,12 @@
     "node": ">=20.19"
   },
   "homepage": "https://gl36.org/docs/client/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/genloss-36/gl-36.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": "https://github.com/genloss-36/gl-36/issues",
   "keywords": [
     "solana",
     "nft",

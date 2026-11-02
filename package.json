@@ -2,6 +2,10 @@
   "name": "gl-36",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/genloss-36/gl-36.git"
+  },
   "type": "module",
   "workspaces": [
     "packages/*",
