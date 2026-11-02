@@ -1,6 +1,7 @@
 ---
 name: gl36
 description: Build on GL-36, the Solana NFT standard where a whole collection is one program-owned account and each token is a 36-byte slot (32-byte owner, 4-byte price), with the @gl-36/sdk TypeScript package on @solana/kit. Use this skill whenever the user mentions GL-36, gl36, @gl-36/sdk, gl36.org, GENLOSS, or the program GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb, or wants to read a GL-36 collection, show its tokens in a wallet, marketplace or bot, mint, list, delist, buy or transfer GL-36 tokens, track sales from logs, launch, close or settle a GL-36 collection, decode its account bytes, or explain a "custom program error" from it, even if they only paste a collection address or an error.
+license: MIT
 metadata:
   author: gl36
   version: "0.1.0"

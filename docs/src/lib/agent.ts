@@ -2,7 +2,7 @@ import { FEATURED } from "./config";
 
 const SITE = new URL(import.meta.env.SITE ?? "https://gl36.org");
 
-export const SKILL_INSTALL = `npx skills add ${SITE.origin}`;
+export const SKILL_INSTALL = "npx skills add genloss-36/gl-36";
 
 export const AGENT_PROMPT = [
   `Set up this project to build on GL-36, the Solana NFT standard where a whole collection is one account and each token is a 36-byte slot. Docs: ${new URL("/docs/", SITE).href}`,

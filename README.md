@@ -1,5 +1,13 @@
 # GL-36
 
+[![@gl-36/sdk](https://img.shields.io/npm/v/@gl-36/sdk?label=%40gl-36%2Fsdk&color=black)](https://www.npmjs.com/package/@gl-36/sdk)
+[![SDK CI](https://github.com/genloss-36/gl-36/actions/workflows/sdk.yml/badge.svg)](https://github.com/genloss-36/gl-36/actions/workflows/sdk.yml)
+[![Verified build](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fverify.osec.io%2Fstatus%2FGtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb&query=%24.is_verified&label=verified%20build&color=black)](https://verify.osec.io/status/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb)
+[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-black?logo=solana&logoColor=white)](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb)
+[![skills.sh](https://skills.sh/b/genloss-36/gl-36)](https://skills.sh/genloss-36/gl-36)
+[![Docs](https://img.shields.io/badge/docs-gl36.org-black)](https://gl36.org)
+[![License: MIT](https://img.shields.io/github/license/genloss-36/gl-36?color=black)](LICENSE)
+
 GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the owner and 4 for a listing price. A whole collection lives in one program-owned account, so there are no mint, token or metadata accounts per NFT, no indexer, and trading is built into the program.
 
 - Docs: [gl36.org](https://gl36.org)
@@ -76,11 +84,13 @@ To deploy your own copy, put the deployer keypair in `.keys/deployer.json` (the 
 
 ## Agent skill
 
-[`skills/gl36`](skills/gl36/SKILL.md) gives a coding agent what it needs to build on GL-36 correctly: the account model, the SDK calls for reading, minting, listing, buying and transferring, price units, the stale-listing guard in `buy`, error and log parsing, closing and settling, and a launch walkthrough, with the byte layout in `references/`. gl36.org serves it as a [well-known agent skill](https://skills.sh), so one command installs it into any project:
+[`skills/gl36`](skills/gl36/SKILL.md) gives a coding agent what it needs to build on GL-36 correctly: the account model, the SDK calls for reading, minting, listing, buying and transferring, price units, the stale-listing guard in `buy`, error and log parsing, closing and settling, and a launch walkthrough, with the byte layout in `references/`. It lives in this repository in the [skills.sh](https://skills.sh/genloss-36/gl-36) layout, so one command installs it into any project:
 
 ```bash
-npx skills add https://gl36.org
+npx skills add genloss-36/gl-36
 ```
+
+gl36.org serves the same skill as a well-known endpoint, so `npx skills add https://gl36.org` works too.
 
 The [Quickstart](https://gl36.org/docs/quickstart/) and the landing page also offer a prompt to paste into an agent: it installs the skill and the SDK, checks them against mainnet and asks what to build.
 
