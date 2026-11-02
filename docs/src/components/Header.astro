@@ -54,8 +54,11 @@ const links = [
       </button>
       {
         menu && (
-          <button class="menu press" type="button" data-menu-toggle aria-expanded="false" aria-controls="sidebar">
-            Menu
+          <button class="icon menu" type="button" data-menu-toggle aria-expanded="false" aria-controls="sidebar" aria-label="Open menu">
+            <span class="bars" aria-hidden="true">
+              <span />
+              <span />
+            </span>
           </button>
         )
       }
@@ -107,7 +110,7 @@ const links = [
     if (!menu) return;
     document.body.toggleAttribute("data-menu-open", open);
     menu.setAttribute("aria-expanded", String(open));
-    menu.textContent = open ? "Close" : "Menu";
+    menu.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     document.querySelectorAll("main, footer").forEach((el) => el.toggleAttribute("inert", open));
     if (open) (document.querySelector<HTMLElement>("#sidebar a[aria-current]") ?? document.querySelector<HTMLElement>("#sidebar a"))?.focus();
   };
@@ -233,11 +236,32 @@ const links = [
   }
   .menu {
     display: none;
-    border: 0;
-    background: none;
-    padding: 6px 0;
-    font-size: 14px;
-    cursor: pointer;
+  }
+  .bars {
+    position: relative;
+    width: 14px;
+    height: 10px;
+  }
+  .bars span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    border-radius: 1px;
+    background: currentColor;
+    transition: transform var(--spring-dur) var(--spring);
+  }
+  .bars span:first-child {
+    top: 2px;
+  }
+  .bars span:last-child {
+    bottom: 2px;
+  }
+  .menu[aria-expanded="true"] .bars span:first-child {
+    transform: translateY(2.25px) rotate(45deg);
+  }
+  .menu[aria-expanded="true"] .bars span:last-child {
+    transform: translateY(-2.25px) rotate(-45deg);
   }
 
   @media (max-width: 960px) {
@@ -267,7 +291,7 @@ const links = [
   }
   @media (max-width: 1024px) {
     .menu {
-      display: block;
+      display: grid;
     }
   }
   @media (max-width: 420px) {
