@@ -19,7 +19,6 @@
   background: var(--bg-elev);
   padding: 20px 22px;
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   overflow-x: auto;
   font-size: 13.5px;
   line-height: 1.65;

@@ -73,7 +73,7 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   import { FLAG_CLOSED, FLAG_SETTLED, PRICE_UNIT, type Collection } from "@gl-36/sdk";
   import { ByteField } from "../lib/bytefield";
   import { fetchCollection, lamportsPerByte, rpcUrl, setRpcUrl, type Account } from "../lib/chain";
-  import { describe } from "../lib/describe";
+  import { describe, render } from "../lib/describe";
   import { explorerAddress } from "../lib/config";
   import { hex, int, isZero, pad, sol } from "../lib/format";
 
@@ -91,7 +91,10 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   const field = new ByteField($<HTMLCanvasElement>(".map canvas"), {
     mode: "content",
     spare: 2,
-    onHover: (h, col) => (hover.textContent = h ? describe(h, col) : "Point at a byte to decode it."),
+    onHover: (h, col) => {
+      if (h) render(hover, describe(h, col));
+      else hover.textContent = "Point at a byte to decode it.";
+    },
   });
 
   const el = (tag: string, text: string, cls?: string) => {
@@ -390,13 +393,11 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     margin: 8px 0 48px;
-    border-top: 1px solid var(--line);
   }
   .summary :global(div) {
     display: grid;
     gap: 8px;
     padding: 20px 20px 22px 0;
-    border-bottom: 1px solid var(--line);
   }
   .summary :global(.v) {
     font-family: var(--font-display);
@@ -436,13 +437,26 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
     margin: 0;
   }
   .hover {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
     margin: 0;
     font-size: 12px;
-    color: var(--fg-2);
-    text-align: right;
+    color: var(--fg-3);
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .hover :global(.part) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .hover :global(.v) {
+    color: var(--fg);
+  }
+  .hover :global(code) {
+    font-family: var(--font-mono);
+    font-size: 11px;
   }
   .kv {
     display: grid;
@@ -454,7 +468,6 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   .kv :global(dt),
   .kv :global(dd) {
     padding: 9px 0;
-    border-top: 1px solid var(--line);
   }
   .kv :global(dt) {
     color: var(--fg-3);
@@ -498,7 +511,6 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   }
   .slots :global(td) {
     padding: 10px 12px 10px 0;
-    border-bottom: 1px solid var(--line);
     font-variant-numeric: tabular-nums;
   }
   .slots th[align="right"],

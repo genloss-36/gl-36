@@ -2,17 +2,46 @@ import { PRICE_UNIT, type Collection } from "@gl-36/sdk";
 import type { Hover } from "./bytefield";
 import { hex, int, isZero, short, sol } from "./format";
 
-export function describe(h: Hover, col: Collection | null): string {
-  if (h.kind === "free") return `Token ${int(h.id)} isn’t minted yet. Minting it adds this row.`;
+export interface Part {
+  k?: string;
+  v: string;
+  code?: boolean;
+}
+
+export function describe(h: Hover, col: Collection | null): Part[] {
+  if (h.kind === "free") return [{ k: "slot", v: int(h.id) }, { v: "not minted" }];
   if (h.kind === "slot") {
     const s = col?.slots[h.id];
-    if (!s) return `Token ${int(h.id)}`;
-    const price = s.price ? `listed at ${sol(BigInt(s.price) * PRICE_UNIT)}\u00a0SOL` : "not listed";
-    return `Token ${int(h.id)}, owned by ${short(s.owner)}, ${price}.`;
+    const id = { k: "slot", v: int(h.id) };
+    if (!s) return [id];
+    const price = s.price ? `${sol(BigInt(s.price) * PRICE_UNIT)}\u00a0SOL` : "not listed";
+    return [id, { k: "owner", v: short(s.owner), code: true }, { k: "price", v: price }];
   }
   const f = h.field;
-  const range = f.len === 1 ? `byte ${f.off}` : `bytes ${f.off}–${f.off + f.len - 1}`;
-  return `Header ${range}: ${f.name}${col ? ` = ${value(f.name, col)}` : ""}`;
+  const range = f.len === 1 ? { k: "byte", v: String(f.off) } : { k: "bytes", v: `${f.off}–${f.off + f.len - 1}` };
+  return col ? [range, { k: f.name, v: value(f.name, col), code: CODE.has(f.name) }] : [range, { v: f.name }];
+}
+
+const CODE = new Set(["creator", "treasury", "entropy", "generator_hash"]);
+
+export function render(el: HTMLElement, parts: Part[]) {
+  el.replaceChildren(
+    ...parts.map((p) => {
+      const part = document.createElement("span");
+      part.className = "part";
+      if (p.k) {
+        const k = document.createElement("span");
+        k.className = "k";
+        k.textContent = p.k;
+        part.append(k);
+      }
+      const v = document.createElement(p.code ? "code" : "span");
+      v.className = "v";
+      v.textContent = p.v;
+      part.append(v);
+      return part;
+    }),
+  );
 }
 
 function value(name: string, c: Collection): string {

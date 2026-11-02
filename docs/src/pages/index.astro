@@ -28,7 +28,7 @@ const principles = [
 <Base description="GL-36 is an NFT standard for Solana where a token takes 36 bytes. A whole collection lives in one account, with trading built into the program." current="home">
   <main id="main">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="field" data-hero data-address={FEATURED?.address}>
+      <div class="field" data-hero data-address={FEATURED?.address} data-title={FEATURED?.title}>
         <canvas aria-hidden="true"></canvas>
       </div>
       <div class="hero-copy wide">
@@ -113,7 +113,7 @@ const principles = [
 <script>
   import { ByteField, sampleAccount } from "../lib/bytefield";
   import { fetchCollection } from "../lib/chain";
-  import { describe } from "../lib/describe";
+  import { describe, render } from "../lib/describe";
   import { int } from "../lib/format";
 
   const box = document.querySelector<HTMLElement>("[data-hero]")!;
@@ -125,7 +125,8 @@ const principles = [
     mode: "fill",
     minCell: 22,
     onHover: (h, col) => {
-      readout.textContent = h ? describe(h, col) : IDLE;
+      if (h) render(readout, describe(h, col));
+      else readout.textContent = IDLE;
       readout.toggleAttribute("data-on", !!h);
     },
   });
@@ -137,11 +138,12 @@ const principles = [
       const acc = await fetchCollection(address);
       field.set(acc.data);
       live.hidden = false;
-      status.textContent = `A live collection: ${int(acc.data.length)} bytes, ${int(acc.col.minted)} tokens.`;
+      status.textContent = `${box.dataset.title ?? "Collection"} · ${int(acc.data.length)} bytes · ${int(acc.col.minted)} tokens`;
     } catch {
-      field.set(sampleAccount());
+      const data = sampleAccount();
+      field.set(data);
       live.hidden = true;
-      status.textContent = address ? "A sample collection account. The network didn't answer." : "A sample collection account.";
+      status.textContent = address ? "Example account · mainnet didn’t answer" : `Example account · ${int(data.length)} bytes · ${int((data.length - 224) / 36)} tokens`;
     }
   }
   load();
@@ -226,16 +228,30 @@ const principles = [
     transform: translateY(-1px);
   }
   .readout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
     min-height: 18px;
-    margin: 4px 0 0 14px;
+    margin: 6px 0 0;
     font-size: 13px;
     line-height: 18px;
     color: var(--fg-3);
     font-variant-numeric: tabular-nums;
-    transition: color 0.2s var(--ease);
   }
-  .readout[data-on] {
+  .readout :global(.part) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .readout :global(.k) {
+    color: var(--fg-3);
+  }
+  .readout :global(.v) {
     color: var(--fg);
+  }
+  .readout :global(code) {
+    font-family: var(--font-mono);
+    font-size: 12px;
   }
 
   .intro {
@@ -304,7 +320,6 @@ const principles = [
   }
   .principles li {
     padding: 32px 0 40px;
-    border-top: 1px solid var(--line);
   }
   .principles h3 {
     margin: 0 0 10px;
@@ -327,7 +342,6 @@ const principles = [
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     margin-top: clamp(40px, 5vw, 72px);
-    border-top: 1px solid var(--line);
   }
   .closing-links a {
     display: grid;
@@ -361,7 +375,6 @@ const principles = [
     }
     .closing-links a {
       padding-bottom: 24px;
-      border-bottom: 1px solid var(--line);
     }
   }
   @media (max-width: 960px) {

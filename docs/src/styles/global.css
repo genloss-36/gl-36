@@ -207,12 +207,6 @@ pre,
   padding-inline: var(--gutter);
 }
 
-.rule {
-  border: 0;
-  border-top: 1px solid var(--line);
-  margin: 0;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
