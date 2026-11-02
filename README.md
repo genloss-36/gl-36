@@ -49,10 +49,10 @@ Requirements: Node 24 or newer (tests and scripts run `.ts` files directly), and
 cd program && cargo build-sbf
 ```
 
-The binary that goes on chain is built with [solana-verify](https://github.com/Ellipsis-Labs/solana-verifiable-build) in its Docker image, so anyone can rebuild it byte for byte and compare the hash with the deployed program:
+The binary that goes on chain is built with [solana-verify](https://github.com/Ellipsis-Labs/solana-verifiable-build) in its Docker image, so anyone can rebuild it byte for byte and compare the hash with the deployed program. The program is [verified by OtterSec](https://verify.osec.io/status/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb) against this repository.
 
 ```bash
-cd program && solana-verify build --base-image solanafoundation/solana-verifiable-build:4.3.0 --library-name gl36
+cd program && solana-verify build --base-image solanafoundation/solana-verifiable-build:4.3.0 --library-name gl36 --arch v3
 ```
 
 ```bash
