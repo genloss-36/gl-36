@@ -36,6 +36,14 @@ export default function MintPanel({ lang }: { lang: Lang }) {
   const total = col ? col.mintPrice * BigInt(qty) + (rent ?? 0n) : 0n;
   const other = COLLECTIONS.find((c) => c.id !== colId);
 
+  if (!COLLECTIONS.length) {
+    return (
+      <div className="mint">
+        <p className="secondary" style={{ margin: 0 }}>{tr("col.soon")}</p>
+      </div>
+    );
+  }
+
   const mint = async () => {
     if (!col || !chain) return;
     setBusy(true);

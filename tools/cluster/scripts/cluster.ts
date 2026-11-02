@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  AccountRole,
   appendTransactionMessageInstructions,
   createKeyPairSignerFromBytes,
   createSolanaRpc,
@@ -17,14 +16,14 @@ import {
   type Instruction,
   type KeyPairSigner,
 } from "@solana/kit";
-import { SYSTEM_PROGRAM, decodeCollection } from "@gl36/sdk";
+import { decodeCollection } from "@gl36/sdk";
 
-export const RPC_URL = process.env.RPC_URL ?? "https://api.devnet.solana.com";
+export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
+export const RPC_URL = process.env.RPC_URL ?? PUBLIC_RPC;
 const WS_URL = process.env.WS_URL ?? RPC_URL.replace(/^http/, "ws").replace(":8899", ":8900");
 export const local = RPC_URL.includes("127.0.0.1") || RPC_URL.includes("localhost");
 export const explorer = (sig: string) =>
-  `https://explorer.solana.com/tx/${sig}?cluster=` +
-  (local ? `custom&customUrl=${encodeURIComponent(RPC_URL)}` : "devnet");
+  `https://explorer.solana.com/tx/${sig}` + (local ? `?cluster=custom&customUrl=${encodeURIComponent(RPC_URL)}` : "");
 
 export const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 export const loadKey = (p: string) =>
@@ -35,9 +34,6 @@ const sendAndConfirm = sendAndConfirmTransactionFactory({
   rpc,
   rpcSubscriptions: createSolanaRpcSubscriptions(WS_URL),
 });
-
-export interface Row { step: string; cu: bigint; fee: bigint; sig: string }
-export const rows: Row[] = [];
 
 export const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -71,25 +67,8 @@ export async function send(step: string, payer: KeyPairSigner, ixs: Instruction[
     throw e;
   }
   const t = await call(() => rpc.getTransaction(sig, { maxSupportedTransactionVersion: 0, commitment: "confirmed" }).send());
-  const row = { step, cu: BigInt(t?.meta?.computeUnitsConsumed ?? 0), fee: BigInt(t?.meta?.fee ?? 0), sig };
-  rows.push(row);
-  console.log(`✔ ${step.padEnd(28)} ${String(row.cu).padStart(6)} CU  ${explorer(sig)}`);
-  return row;
-}
-
-export function systemTransfer(from: KeyPairSigner, to: Address, lamports: bigint): Instruction {
-  const data = new Uint8Array(12);
-  const v = new DataView(data.buffer);
-  v.setUint32(0, 2, true);
-  v.setBigUint64(4, lamports, true);
-  return {
-    programAddress: SYSTEM_PROGRAM,
-    accounts: [
-      { address: from.address, role: AccountRole.WRITABLE_SIGNER, signer: from },
-      { address: to, role: AccountRole.WRITABLE },
-    ],
-    data,
-  } as Instruction;
+  console.log(`✔ ${step.padEnd(28)} ${String(t?.meta?.computeUnitsConsumed ?? 0).padStart(6)} CU  ${explorer(sig)}`);
+  return sig;
 }
 
 export const balance = async (a: Address) =>

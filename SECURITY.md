@@ -1,6 +1,6 @@
 # Security
 
-The GL-36 program has not been audited. It runs on Solana devnet only, with test SOL. Do not deploy it to mainnet or use it with real funds until it has been reviewed.
+The GL-36 program has not been audited. Anyone who puts real funds into it does so at their own risk.
 
 ## Reporting a vulnerability
 

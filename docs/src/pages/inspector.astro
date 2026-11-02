@@ -16,7 +16,7 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
       <button class="btn" type="submit" data-submit>Inspect</button>
     </form>
     <div class="known">
-      <span class="label">On {CLUSTER}:</span>
+      {COLLECTIONS.length > 0 && <span class="label">On {CLUSTER}:</span>}
       {COLLECTIONS.map((c) => <button type="button" class="chip press" data-pick={c.address}>{c.title}</button>)}
       <details class="rpc">
         <summary>RPC</summary>

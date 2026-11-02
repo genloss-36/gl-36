@@ -11,8 +11,8 @@ import {
   pipe,
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
-  signTransaction,
   type Instruction,
+  type Signature,
   type TransactionSigner,
 } from "@solana/kit";
 import { ERR } from "@gl36/sdk";
@@ -20,7 +20,7 @@ import { t, type Key, type Lang } from "../i18n/strings";
 import { refresh, rpc } from "./chain";
 import { explorerTx } from "./config";
 import { $wallet, toast } from "./store";
-import { burnerKeys, signWire } from "./wallet";
+import { submitWire } from "./wallet";
 
 const PROGRAM_ERRORS: Record<number, Key> = {
   [ERR.SoldOut]: "err.soldOut",
@@ -78,14 +78,18 @@ export async function run(lang: Lang, action: Key, build: (me: TransactionSigner
     (m) => appendTransactionMessageInstructions(build(me), m),
   );
   const tx = compileTransaction(message);
-  const signedWire = await signWire(new Uint8Array(getTransactionEncoder().encode(tx)), async () =>
-    new Uint8Array(getTransactionEncoder().encode(await signTransaction([burnerKeys()!], tx))),
-  );
-  const signed = getTransactionDecoder().decode(signedWire);
-  const sig = getSignatureFromTransaction(signed);
+  const submitted = await submitWire(new Uint8Array(getTransactionEncoder().encode(tx)));
   const name = t(lang, action);
-  toast("info", t(lang, "toast.sent", { action: name }), explorerTx(sig));
-  await rpc().sendTransaction(getBase64EncodedWireTransaction(signed), { encoding: "base64", preflightCommitment: "confirmed" }).send();
+  let sig: Signature;
+  if ("sent" in submitted) {
+    sig = submitted.sent;
+    toast("info", t(lang, "toast.sent", { action: name }), explorerTx(sig));
+  } else {
+    const signed = getTransactionDecoder().decode(submitted.signed);
+    sig = getSignatureFromTransaction(signed);
+    toast("info", t(lang, "toast.sent", { action: name }), explorerTx(sig));
+    await rpc().sendTransaction(getBase64EncodedWireTransaction(signed), { encoding: "base64", preflightCommitment: "confirmed" }).send();
+  }
   for (let i = 0; i < 60; i++) {
     await sleep(1_000);
     const { value } = await rpc().getSignatureStatuses([sig]).send();

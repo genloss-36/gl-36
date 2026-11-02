@@ -1,0 +1,13 @@
+{
+  "cluster": "mainnet-beta",
+  "rpc": "https://cindie-7oi4z0-fast-mainnet.helius-rpc.com/",
+  "programId": "GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb",
+  "projects": {
+    "genloss": {
+      "title": "GENLOSS",
+      "site": "https://genloss.gl36.org",
+      "generatorHash": "ae0df77d51f561f518af901577120a828026cd9f5ef52ac048271b45ed727797"
+    }
+  },
+  "collections": []
+}

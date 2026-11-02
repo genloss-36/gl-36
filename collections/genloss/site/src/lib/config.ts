@@ -1,16 +1,21 @@
-import devnet from "@gl36/deployments/devnet.json";
+import mainnet from "@gl36/deployments/mainnet.json";
 
-export const CONFIG = devnet;
-export type CollectionCfg = (typeof devnet.collections)[number];
+export interface CollectionCfg {
+  id: string;
+  project: string;
+  title: string;
+  address: string;
+  maxSupply: number;
+  mintPrice: string;
+}
 
-export const TESTNET = CONFIG.cluster !== "mainnet-beta";
+export const CONFIG = mainnet;
+
 export const PROJECT = "genloss";
-export const COLLECTIONS: CollectionCfg[] = CONFIG.collections.filter(
-  (c) => c.project === PROJECT && (TESTNET || !("testnetOnly" in c && c.testnetOnly)),
-);
+export const COLLECTIONS: CollectionCfg[] = (CONFIG.collections as CollectionCfg[]).filter((c) => c.project === PROJECT);
 
 export const DOCS_URL = "https://gl36.org";
-export const CHAIN = TESTNET ? "solana:devnet" : "solana:mainnet";
+export const CHAIN = "solana:mainnet";
 
 const RPC_KEY = "genloss.rpc";
 
@@ -30,6 +35,5 @@ export function setRpcUrl(url: string) {
   }
 }
 
-const explorerCluster = TESTNET ? "?cluster=devnet" : "";
-export const explorerTx = (sig: string) => `https://explorer.solana.com/tx/${sig}${explorerCluster}`;
-export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}${explorerCluster}`;
+export const explorerTx = (sig: string) => `https://explorer.solana.com/tx/${sig}`;
+export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}`;

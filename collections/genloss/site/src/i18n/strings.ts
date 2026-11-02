@@ -9,7 +9,6 @@ const en = {
   "nav.standard": "GL-36",
   "nav.lang": "中文",
   "nav.skip": "Skip to content",
-  "net.devnet": "Devnet",
 
   "sound.on": "Sound on",
   "sound.off": "Sound off",
@@ -17,12 +16,8 @@ const en = {
   "wallet.connect": "Connect",
   "wallet.choose": "Choose a wallet",
   "wallet.none": "No Solana wallet found. Install Phantom, Solflare or Backpack, then reload the page.",
-  "wallet.burner": "Test wallet",
-  "wallet.burnerNote": "A throwaway devnet key kept in this browser.",
   "wallet.copy": "Copy address",
   "wallet.copied": "Address copied",
-  "wallet.airdrop": "Get 1 test SOL",
-  "wallet.airdropOk": "1 test SOL is on its way",
   "wallet.disconnect": "Disconnect",
 
   "hero.title": "GL-36 NFT standard",
@@ -66,6 +61,7 @@ const en = {
   "col.sort.idUp": "Oldest",
   "col.sort.idDown": "Newest",
   "col.loading": "Reading the collection…",
+  "col.soon": "The mint hasn't opened yet.",
   "col.summary": "Floor {floor}. {listed} for sale. {owners} owners.",
   "col.summaryNoFloor": "Nothing for sale. {owners} owners.",
   "col.emptyForSale": "Nothing is for sale right now.",
@@ -134,7 +130,6 @@ const en = {
   "foot.rpc": "RPC endpoint",
   "foot.save": "Save",
   "foot.reset": "Reset",
-  "foot.note": "Running on Solana devnet with test SOL. Nothing here has real value.",
 
   "toast.mint": "Mint",
   "toast.buy": "Purchase",
@@ -175,7 +170,6 @@ const zh: Record<Key, string> = {
   "nav.standard": "GL-36",
   "nav.lang": "EN",
   "nav.skip": "跳到正文",
-  "net.devnet": "开发网",
 
   "sound.on": "声音开",
   "sound.off": "声音关",
@@ -183,12 +177,8 @@ const zh: Record<Key, string> = {
   "wallet.connect": "连接钱包",
   "wallet.choose": "选择钱包",
   "wallet.none": "未找到 Solana 钱包。请安装 Phantom、Solflare 或 Backpack 后刷新页面。",
-  "wallet.burner": "测试钱包",
-  "wallet.burnerNote": "保存在本浏览器中的一次性开发网密钥。",
   "wallet.copy": "复制地址",
   "wallet.copied": "地址已复制",
-  "wallet.airdrop": "领取 1 个测试 SOL",
-  "wallet.airdropOk": "1 个测试 SOL 正在到账",
   "wallet.disconnect": "断开连接",
 
   "hero.title": "GL-36 NFT 标准",
@@ -232,6 +222,7 @@ const zh: Record<Key, string> = {
   "col.sort.idUp": "最早",
   "col.sort.idDown": "最新",
   "col.loading": "正在读取收藏…",
+  "col.soon": "铸造尚未开放。",
   "col.summary": "地板价 {floor}。{listed} 件在售。{owners} 位持有人。",
   "col.summaryNoFloor": "暂无在售。{owners} 位持有人。",
   "col.emptyForSale": "目前没有在售作品。",
@@ -300,7 +291,6 @@ const zh: Record<Key, string> = {
   "foot.rpc": "RPC 节点",
   "foot.save": "保存",
   "foot.reset": "重置",
-  "foot.note": "运行在 Solana 开发网，使用测试 SOL。此处一切没有真实价值。",
 
   "toast.mint": "铸造",
   "toast.buy": "购买",

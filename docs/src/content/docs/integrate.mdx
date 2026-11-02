@@ -79,7 +79,7 @@ Program errors arrive as `custom program error: 0x…` inside a kit `SolanaError
 ```ts
 import { PROGRAM_ID, parseProgramError } from "@gl36/sdk";
 
-const err = parseProgramError(e, { programId: PROGRAM_ID.devnet });
+const err = parseProgramError(e, { programId: PROGRAM_ID.mainnet });
 if (err?.name === "SellerMismatch") showMessage("This token was just sold or moved. Refresh and try again.");
 ```
 

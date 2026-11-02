@@ -8,7 +8,7 @@ Mint site: [genloss.gl36.org](https://genloss.gl36.org)
 |---|---|
 | [`generator/`](generator) | `genloss-gen.js`, the deterministic art generator, with test vectors, `check.mjs` and a preview page |
 | [`site/`](site) | The mint site: Astro + React islands, English and Chinese |
-| [`scripts/seed.ts`](scripts/seed.ts) | Creates the devnet Showcase and Genesis collections and records them in `deployments/devnet.json` |
+| [`scripts/launch.ts`](scripts/launch.ts) | Creates the Genesis collection and records it in `deployments/mainnet.json` |
 | [`test/`](test) | Checks that the generator's seeds match `@gl36/sdk` and that the registry pins this generator's hash |
 
 The seed of piece `id` is `sha256("genloss/v1" ‖ collection ‖ secret ‖ entropy ‖ id_u16_le)`, the SDK's `tokenSeed` with the `genloss/v1` domain.
@@ -24,9 +24,9 @@ Run from the repository root after `npm install`:
 | `npm run check -w genloss` | `astro check` for the site |
 | `npm test -w genloss` | Seed and registry tests |
 | `npm run generator -w genloss -- 36` | Hashes the generator, renders ids 0 to 35 twice to prove determinism and rewrites `generator/vectors.json`; a diff there means the art changed |
-| `npm run seed -w genloss` | Deploys or continues the devnet collections; needs keys in `.keys/` |
+| `npm run launch -w genloss` | Creates Genesis if it doesn't exist yet and records it; needs keys in `.keys/` |
 
-The page hashes the served generator and compares it with the collection's on-chain `generator_hash`. Collection nonces are derived from the generator's hash, so seeding after a generator change creates fresh collections whose `generator_hash` matches. To browse pieces without the site:
+The page hashes the served generator and compares it with the collection's on-chain `generator_hash`. Collection nonces are derived from the generator's hash, so launching after a generator change creates a fresh collection whose `generator_hash` matches. To browse pieces without the site:
 
 ```bash
 python3 -m http.server 4173 --directory collections/genloss/generator

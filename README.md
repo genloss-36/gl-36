@@ -7,7 +7,7 @@ GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the own
 - Agent skill: [`skills/gl36`](skills/gl36) for Claude Code, Codex, Cursor and other coding agents
 - First collection: [GENLOSS](collections/genloss), minted at [genloss.gl36.org](https://genloss.gl36.org)
 
-> The program is unaudited and deployed on devnet only. Do not use it with real funds. See [SECURITY.md](SECURITY.md).
+> The program has not been audited. See [SECURITY.md](SECURITY.md).
 
 ## Repository
 
@@ -19,7 +19,7 @@ The standard and everything shared sits at the top level. Each mint built on it 
 | [`packages/sdk/`](packages/sdk) | `@gl36/sdk`: instruction builders, account decoding, RPC reads, logs and errors on [@solana/kit](https://github.com/anza-xyz/kit), with unit and LiteSVM tests |
 | [`docs/`](docs) | The docs site at gl36.org: Astro + MDX, with an account inspector |
 | [`deployments/`](deployments) | `@gl36/deployments`: where the program and every collection are deployed, per cluster |
-| [`tools/devnet/`](tools/devnet) | `@gl36/devnet`: cluster helpers for deploy scripts, and a run of every instruction against a live cluster |
+| [`tools/cluster/`](tools/cluster) | `@gl36/cluster`: keys, RPC and send-and-confirm helpers for deploy scripts |
 | [`skills/gl36/`](skills/gl36) | An agent skill that teaches coding agents to integrate GL-36 with the SDK |
 | [`collections/genloss/`](collections/genloss) | GENLOSS: its art generator, mint site and deploy script |
 | [`DESIGN.md`](DESIGN.md) | Account layout, instructions, costs, and how the SDK, the docs and GENLOSS are built |
@@ -60,13 +60,12 @@ npm install && npm test
 | `npm run genloss` | GENLOSS mint site dev server |
 | `npm run check` | `astro check` for both sites |
 | `npm run build` | Builds the SDK to `packages/sdk/dist` |
-| `npm run e2e -w @gl36/devnet` | Runs every instruction on the cluster and reports compute units and fees |
 
-## Devnet
+## Mainnet
 
-Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb?cluster=devnet). Every collection on it is listed in [`deployments/devnet.json`](deployments/devnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
+Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb). Every collection on it is listed in [`deployments/mainnet.json`](deployments/mainnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
 
-To deploy your own copy, put keypairs in `.keys/` (`deployer.json`, `treasury.json`, `alice.json`, `bob.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run seed -w genloss`. Set `RPC_URL` to use another endpoint.
+To deploy your own copy, put keypairs in `.keys/` (`deployer.json` and `treasury.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run launch -w genloss`. Set `RPC_URL` to use another endpoint.
 
 ## Agent skill
 
@@ -76,12 +75,12 @@ To deploy your own copy, put keypairs in `.keys/` (`deployer.json`, `treasury.js
 npx skills add https://gl36.org
 ```
 
-The [Quickstart](https://gl36.org/docs/quickstart/) and the landing page also offer a prompt to paste into an agent: it installs the skill and the SDK, checks them against devnet and asks what to build.
+The [Quickstart](https://gl36.org/docs/quickstart/) and the landing page also offer a prompt to paste into an agent: it installs the skill and the SDK, checks them against mainnet and asks what to build.
 
 ## Adding a collection
 
 1. Create `collections/<name>/` with a `package.json` named `<name>`: its generator, its site if it has one, a deploy script and tests. [GENLOSS](collections/genloss) is the reference.
-2. The deploy script uses `@gl36/sdk` and `@gl36/devnet`, and writes its collections to `deployments/<cluster>.json` under `projects.<name>` and `collections[].project = "<name>"`, leaving other projects' entries alone.
+2. The deploy script uses `@gl36/sdk` and `@gl36/cluster`, and writes its collections to `deployments/mainnet.json` under `projects.<name>` and `collections[].project = "<name>"`, leaving other projects' entries alone.
 3. The docs pick the new collections up from the registry; nothing in the shared code changes.
 
 ## License

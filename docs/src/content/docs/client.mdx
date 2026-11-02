@@ -18,14 +18,14 @@ npm install @gl36/sdk @solana/kit
 </Note>
 
 <Note label="Version">
-  0.x follows the devnet deployment. The account layout and the program address may still change before mainnet; a new layout gets a new <code>version</code> byte and a new SDK minor version.
+  0.x follows the mainnet program. A new account layout gets a new <code>version</code> byte and a new SDK minor version.
 </Note>
 
 ## Addresses
 
 | Name | Value |
 | --- | --- |
-| `PROGRAM_ID.devnet` | `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` |
+| `PROGRAM_ID.mainnet` | `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` |
 | `SYSTEM_PROGRAM` | `11111111111111111111111111111111` |
 | `SLOT_HASHES` | `SysvarS1otHashes111111111111111111111111111` |
 
@@ -77,7 +77,7 @@ Every reader takes a kit `Rpc` and an optional `{ commitment, programId }`. With
 | `getLamportsPerByte(rpc)` | The cluster's current rent rate |
 
 ```ts
-const mine = await findCollections(rpc, PROGRAM_ID.devnet, { creator: me.address });
+const mine = await findCollections(rpc, PROGRAM_ID.mainnet, { creator: me.address });
 const slot = await fetchSlot(rpc, mine[0].address, 42);
 ```
 

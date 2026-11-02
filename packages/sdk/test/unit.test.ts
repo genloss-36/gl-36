@@ -50,7 +50,7 @@ import {
   withdrawExcessIx,
 } from "../src/index.ts";
 
-const PROGRAM = PROGRAM_ID.devnet;
+const PROGRAM = PROGRAM_ID.mainnet;
 const enc = getAddressEncoder();
 const hex = (b: ArrayLike<number>) => Buffer.from(Uint8Array.from(b)).toString("hex");
 

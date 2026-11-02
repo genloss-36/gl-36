@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { t, type Lang, type Key } from "../i18n/strings";
-import { DOCS_URL, TESTNET } from "../lib/config";
+import { DOCS_URL } from "../lib/config";
 import Mark from "./Mark.tsx";
 import SoundToggle from "./SoundToggle.tsx";
 import WalletButton from "./WalletButton.tsx";
@@ -39,7 +39,6 @@ const facts: { t: Key; d: Key }[] = [
         <a href="#gl-36" translate="no">{t(lang, "nav.standard")}</a>
       </nav>
       <div class="end">
-        {TESTNET && <span class="net">{t(lang, "net.devnet")}</span>}
         <a class="lang" href={other} hreflang={lang === "zh" ? "en" : "zh-CN"}>{t(lang, "nav.lang")}</a>
         <SoundToggle client:only="react" lang={lang} />
         <WalletButton client:only="react" lang={lang} />
@@ -102,7 +101,6 @@ const facts: { t: Key; d: Key }[] = [
   <footer class="foot">
     <div class="wide">
       <FooterLive client:only="react" lang={lang} />
-      {TESTNET && <p>{t(lang, "foot.note")}</p>}
     </div>
   </footer>
 

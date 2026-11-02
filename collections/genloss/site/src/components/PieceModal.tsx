@@ -62,7 +62,7 @@ export default function PieceModal({ lang, id, onClose }: { lang: Lang; id: numb
   useEffect(() => { rarityTable().then(setRarity); }, [chain.col.minted]);
   useEffect(() => { setForm(null); setErr(null); }, [id, slot.owner, slot.price]);
 
-  const collection = asAddress(collectionCfg().address);
+  const collection = asAddress(collectionCfg()!.address);
   const programId = asAddress(CONFIG.programId);
 
   const replay = async () => {

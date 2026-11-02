@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useStore } from "@nanostores/react";
 import type { Slot } from "@gl36/sdk";
 import type { Lang } from "../i18n/strings";
+import { COLLECTIONS } from "../lib/config";
 import { $chain, $chainError, $selected, $wallet } from "../lib/store";
 import { pad, priceSol } from "../lib/format";
 import { openConnect } from "./WalletButton";
@@ -65,7 +66,7 @@ export default function Gallery({ lang }: { lang: Lang }) {
         </div>
       </div>
 
-      {!chain && <p className={error ? "empty error" : "empty"}>{error ? tr("col.error", { msg: error }) : tr("col.loading")}</p>}
+      {!chain && <p className={error ? "empty error" : "empty"}>{!COLLECTIONS.length ? tr("col.soon") : error ? tr("col.error", { msg: error }) : tr("col.loading")}</p>}
       {chain && !shown.length && (
         <div className="empty">
           <p>{tab === "sale" ? tr("col.emptyForSale") : wallet ? tr("col.emptyYours") : tr("col.connectYours")}</p>

@@ -87,11 +87,9 @@ img, canvas, svg { display: block; }
 .nav .end { margin-left: auto; display: flex; align-items: center; gap: 16px; }
 .lang { font-size: 15px; color: var(--ink); opacity: 0.72; white-space: nowrap; }
 .lang:hover { opacity: 1; }
-.net { font-size: 13px; font-weight: 600; color: var(--ink); opacity: 0.5; white-space: nowrap; }
-.net::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 7px; background: var(--ink); vertical-align: 1px; }
-.nav:not(.solid) .brand, .nav:not(.solid) .links a, .nav:not(.solid) .lang, .nav:not(.solid) .net { text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.6); }
+.nav:not(.solid) .brand, .nav:not(.solid) .links a, .nav:not(.solid) .lang { text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.6); }
 @media (max-width: 760px) {
-  .links, .net { display: none; }
+  .links { display: none; }
   .nav .wide { gap: 12px; }
   .nav .end { gap: 6px; }
   .brand { font-size: 16px; gap: 8px; }

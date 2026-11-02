@@ -1,7 +1,7 @@
 import type { Address } from "@solana/kit";
 
 export const PROGRAM_ID = {
-  devnet: "GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb" as Address,
+  mainnet: "GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb" as Address,
 } as const;
 
 export type Cluster = keyof typeof PROGRAM_ID;

@@ -10,7 +10,9 @@ export const AGENT_PROMPT = [
   `1. Install the GL-36 agent skill: ${SKILL_INSTALL} -y`,
   "2. Read the SKILL.md it installed and follow it for all GL-36 work.",
   "3. Add @gl36/sdk and @solana/kit with this project's package manager.",
-  `4. Check that it works: with the SDK, read the devnet collection ${FEATURED.address} and tell me its state, how many tokens are minted and which are listed.`,
+  FEATURED
+    ? `4. Check that it works: with the SDK, read the collection ${FEATURED.address} and tell me its state, how many tokens are minted and which are listed.`
+    : "4. Check that it works: with the SDK, find the GL-36 collections on mainnet and tell me how many there are.",
   "",
   "Then ask me what I want to build.",
 ].join("\n");

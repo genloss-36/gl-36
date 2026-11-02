@@ -1,6 +1,6 @@
 # Launching a GL-36 collection
 
-A collection is created by one `init` and nothing in it can be edited afterwards: supply (can only shrink, at reveal), mint price, market fee, treasury, the generator hash and the commitment to a secret. Walk the user through each decision before sending `init`, and run the whole launch on devnet first.
+A collection is created by one `init` and nothing in it can be edited afterwards: supply (can only shrink, at reveal), mint price, market fee, treasury, the generator hash and the commitment to a secret. Walk the user through each decision before sending `init`, and simulate every transaction before sending it.
 
 ## 1. Freeze the generator
 
@@ -42,7 +42,7 @@ Store `secret` offline, like a private key. It is needed once, for `reveal`, and
 ```ts
 import { PROGRAM_ID, findCollection, initIx } from "@gl36/sdk";
 
-const program = PROGRAM_ID.devnet;
+const program = PROGRAM_ID.mainnet;
 const nonce = 1;
 const [collection] = await findCollection(program, creator.address, nonce);
 
@@ -90,4 +90,4 @@ Tell the creator that this surplus includes rent minters paid for their slots, a
 
 ## Checklist before `init`
 
-Generator final and hashed; secret generated and stored offline; nonce unused; treasury address correct; fee and price as intended; tried end to end on devnet.
+Generator final and hashed; secret generated and stored offline; nonce unused; treasury address correct; fee and price as intended; every transaction simulated first.

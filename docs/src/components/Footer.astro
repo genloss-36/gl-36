@@ -1,6 +1,6 @@
 ---
 import Mark from "./Mark.astro";
-import { CLUSTER, PROGRAM_ID, explorerAddress, TESTNET } from "../lib/config";
+import { PROGRAM_ID, explorerAddress } from "../lib/config";
 import { short } from "../lib/format";
 
 const cols = [
@@ -54,7 +54,7 @@ const cols = [
     <div class="wide row">
       <span class="brand"><Mark size={16} /><span><span translate="no">GL-36</span>, an NFT standard for Solana</span></span>
       <a class="prog" href={explorerAddress(PROGRAM_ID)} rel="noopener" target="_blank">
-        Program on {TESTNET ? CLUSTER : "mainnet"}: <span class="mono" translate="no">{short(PROGRAM_ID, 6)}</span>
+        Program on mainnet: <span class="mono" translate="no">{short(PROGRAM_ID, 6)}</span>
       </a>
     </div>
   </div>

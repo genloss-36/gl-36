@@ -4,7 +4,7 @@ TypeScript SDK for [GL-36](https://gl36.org), an NFT standard for Solana where a
 
 Built on [`@solana/kit`](https://github.com/anza-xyz/kit). ESM with types, no other dependencies, Node 20.19+ and browsers.
 
-> 0.x follows the devnet deployment. The program is unaudited; do not use it with real funds.
+> The program has not been audited.
 
 ```bash
 npm install @gl36/sdk @solana/kit
@@ -16,9 +16,10 @@ npm install @gl36/sdk @solana/kit
 import { address, createSolanaRpc } from "@solana/kit";
 import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl36/sdk";
 
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
-const fetched = await fetchCollection(rpc, address("3yRDMQHXe3bGxiUcuGxmuSuYb46eCsF2e9kAvcWmJSmm"), {
-  programId: PROGRAM_ID.devnet,
+const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
+const collection = address("<collection address>");
+const fetched = await fetchCollection(rpc, collection, {
+  programId: PROGRAM_ID.mainnet,
 });
 const col = fetched!.collection;
 
@@ -33,7 +34,7 @@ Builders return plain kit `Instruction`s for any transaction pipeline and any Wa
 ```ts
 import { buyIx, listIx, mintIx, parseProgramError, solToPrice } from "@gl36/sdk";
 
-const program = PROGRAM_ID.devnet;
+const program = PROGRAM_ID.mainnet;
 await send(me, [mintIx(program, me, collection, col.creator, 3)]);
 await send(owner, [listIx(program, owner, collection, 7, solToPrice("0.25"))]);
 

@@ -17,7 +17,7 @@ Keep this model in mind, because it changes how integrations should be written:
 - **Content is computed, not stored.** A collection pins the sha256 of its generator; content is generated off-chain from a seed once the collection is revealed. There is no URI or JSON metadata to fetch.
 - **No royalties.** A collection may set one market fee (0–10%) paid to its treasury on every sale.
 
-Status: deployed on **devnet** only and unaudited. Program `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` (`PROGRAM_ID.devnet`). Do not point users at mainnet or real funds.
+Status: program `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` (`PROGRAM_ID.mainnet`) on Solana mainnet. It has not been audited; say so before a user puts real funds into it.
 
 ## Setup
 
@@ -33,9 +33,9 @@ npm install @gl36/sdk @solana/kit
 import { address, createSolanaRpc } from "@solana/kit";
 import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol, slotsOwnedBy } from "@gl36/sdk";
 
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
-const fetched = await fetchCollection(rpc, address(collectionAddress), { programId: PROGRAM_ID.devnet });
-if (!fetched) throw new Error("No account at this address on devnet");
+const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
+const fetched = await fetchCollection(rpc, address(collectionAddress), { programId: PROGRAM_ID.mainnet });
+if (!fetched) throw new Error("No account at this address");
 const col = fetched.collection;
 
 collectionState(col);
@@ -51,7 +51,7 @@ Other reads, all taking a kit `Rpc`:
 | --- | --- |
 | Header only (supply, price, creator…) for a large collection | `fetchHeader(rpc, address)`: 224 bytes via `dataSlice` |
 | One token without downloading the account | `fetchSlot(rpc, address, id)`: 36 bytes, `null` if not minted |
-| Every collection, or every collection of one creator | `findCollections(rpc, PROGRAM_ID.devnet, { creator })` |
+| Every collection, or every collection of one creator | `findCollections(rpc, PROGRAM_ID.mainnet, { creator })` |
 | Several known collections at once | `getMultipleAccounts` then `decodeCollection(bytes)` on each |
 | Live updates | `accountSubscribe` on the collection, or poll `getAccountInfo` every few seconds |
 
@@ -76,7 +76,7 @@ import {
 
 const sendAndConfirm = sendAndConfirmTransactionFactory({
   rpc,
-  rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+  rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.mainnet-beta.solana.com"),
 });
 
 async function send(payer: TransactionSigner, instructions: Instruction[]) {
@@ -100,7 +100,7 @@ Several GL-36 instructions can share one transaction, including instructions on 
 ```ts
 import { PROGRAM_ID, buyIx, listIx, mintIx, solToPrice, transferIx } from "@gl36/sdk";
 
-const program = PROGRAM_ID.devnet;
+const program = PROGRAM_ID.mainnet;
 const collection = address(collectionAddress);
 
 await send(minter, [mintIx(program, minter, collection, col.creator, 3)]);
@@ -129,7 +129,7 @@ import { PROGRAM_ID, parseProgramError } from "@gl36/sdk";
 try {
   await send(buyer, [buyIx(program, buyer, collection, slot.owner, col.treasury, 7, slot.price)]);
 } catch (e) {
-  const err = parseProgramError(e, { programId: PROGRAM_ID.devnet });
+  const err = parseProgramError(e, { programId: PROGRAM_ID.mainnet });
   if (err?.name === "SellerMismatch" || err?.name === "PriceAboveMax") {
     refreshAndAskAgain();
   } else throw e;
@@ -162,7 +162,7 @@ const sigs = await rpc.getSignaturesForAddress(collection, { limit: 50 }).send()
 for (const { signature, err } of sigs) {
   if (err) continue;
   const tx = await rpc.getTransaction(signature, { maxSupportedTransactionVersion: 0, encoding: "json" }).send();
-  for (const event of parseLogs(tx?.meta?.logMessages ?? [], PROGRAM_ID.devnet)) {
+  for (const event of parseLogs(tx?.meta?.logMessages ?? [], PROGRAM_ID.mainnet)) {
     if (event.type === "buy") console.log(`#${event.id} sold for ${priceToSol(event.price)} SOL`);
   }
 }

@@ -137,11 +137,11 @@ const principles = [
       const acc = await fetchCollection(address);
       field.set(acc.data);
       live.hidden = false;
-      status.textContent = `A live devnet collection: ${int(acc.data.length)} bytes, ${int(acc.col.minted)} tokens.`;
+      status.textContent = `A live collection: ${int(acc.data.length)} bytes, ${int(acc.col.minted)} tokens.`;
     } catch {
       field.set(sampleAccount());
       live.hidden = true;
-      status.textContent = "A sample collection account. Devnet didn't answer.";
+      status.textContent = address ? "A sample collection account. The network didn't answer." : "A sample collection account.";
     }
   }
   load();

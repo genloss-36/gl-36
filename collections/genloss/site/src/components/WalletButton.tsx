@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { address, lamports } from "@solana/kit";
 import type { Wallet } from "@wallet-standard/base";
 import type { Lang } from "../i18n/strings";
-import { TESTNET } from "../lib/config";
 import { $balance, $wallet, toast } from "../lib/store";
-import { connectBurner, connectStandard, disconnect, onWalletsChanged, solanaWallets } from "../lib/wallet";
-import { rpc, refresh } from "../lib/chain";
+import { connectStandard, disconnect, onWalletsChanged, solanaWallets } from "../lib/wallet";
 import { explain } from "../lib/tx";
 import { short, sol } from "../lib/format";
 import { useT } from "./ui";
@@ -48,18 +45,6 @@ export default function WalletButton({ lang }: { lang: Lang }) {
     }
   };
 
-  const airdrop = async () => {
-    if (!wallet) return;
-    setOpen(false);
-    try {
-      await rpc().requestAirdrop(address(wallet.address), lamports(1_000_000_000n)).send();
-      toast("ok", tr("wallet.airdropOk"));
-      setTimeout(refresh, 4000);
-    } catch (e) {
-      toast("error", explain(e, lang));
-    }
-  };
-
   return (
     <div className="menu-wrap" ref={box}>
       <button className={wallet ? "btn small" : "btn primary small"} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="wallet-menu">
@@ -71,11 +56,10 @@ export default function WalletButton({ lang }: { lang: Lang }) {
           {wallet ? (
             <>
               <p>
-                {wallet.kind === "burner" ? tr("wallet.burner") : wallet.name}
+                {wallet.name}
                 {balance !== null && <><br /><span style={{ color: "var(--ink)", fontSize: 17 }}>{sol(balance, 4)} SOL</span></>}
               </p>
               <button onClick={() => { navigator.clipboard.writeText(wallet.address); toast("ok", tr("wallet.copied")); setOpen(false); }}>{tr("wallet.copy")}</button>
-              {TESTNET && <button onClick={airdrop}>{tr("wallet.airdrop")}</button>}
               <hr />
               <button onClick={() => { disconnect(); setOpen(false); }}>{tr("wallet.disconnect")}</button>
             </>
@@ -89,14 +73,6 @@ export default function WalletButton({ lang }: { lang: Lang }) {
                 </button>
               ))}
               {!wallets.length && <p>{tr("wallet.none")}</p>}
-              {TESTNET && (
-                <>
-                  <hr />
-                  <button onClick={() => choose(connectBurner)}>
-                    <span>{tr("wallet.burner")}<small>{tr("wallet.burnerNote")}</small></span>
-                  </button>
-                </>
-              )}
             </>
           )}
         </div>

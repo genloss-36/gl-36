@@ -27,7 +27,7 @@ for (const { signature, err } of sigs) {
   const tx = await rpc
     .getTransaction(signature, { maxSupportedTransactionVersion: 0, encoding: "json" })
     .send();
-  for (const event of parseLogs(tx?.meta?.logMessages ?? [], PROGRAM_ID.devnet)) {
+  for (const event of parseLogs(tx?.meta?.logMessages ?? [], PROGRAM_ID.mainnet)) {
     if (event.type === "buy") console.log(`#${event.id} sold for ${event.price} units`);
   }
 }

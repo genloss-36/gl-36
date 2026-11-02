@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { generateKeyPairSigner, getAddressEncoder } from "@solana/kit";
 import { tokenSeed } from "@gl36/sdk";
-import devnet from "@gl36/deployments/devnet.json" with { type: "json" };
+import mainnet from "@gl36/deployments/mainnet.json" with { type: "json" };
 import { artSeed, hex } from "../generator/genloss-gen.js";
 
 test("the generator derives seeds exactly as the SDK's tokenSeed with the genloss/v1 domain", async () => {
@@ -21,6 +21,5 @@ test("the generator derives seeds exactly as the SDK's tokenSeed with the genlos
 test("the registry records the hash of the generator in this folder", () => {
   const file = readFileSync(new URL("../generator/genloss-gen.js", import.meta.url));
   const sha = createHash("sha256").update(file).digest("hex");
-  assert.equal(devnet.projects.genloss.generatorHash, sha);
-  assert.ok(devnet.collections.some((c) => c.project === "genloss"));
+  assert.equal(mainnet.projects.genloss.generatorHash, sha);
 });

@@ -1,9 +1,8 @@
-import devnet from "@gl36/deployments/devnet.json";
+import mainnet from "@gl36/deployments/mainnet.json";
 
-export const CLUSTER = devnet.cluster as "devnet" | "mainnet-beta";
-export const RPC = devnet.rpc;
-export const PROGRAM_ID = devnet.programId;
-export const TESTNET = CLUSTER !== "mainnet-beta";
+export const CLUSTER = mainnet.cluster;
+export const RPC = mainnet.rpc;
+export const PROGRAM_ID = mainnet.programId;
 
 export interface Project {
   id: string;
@@ -12,7 +11,7 @@ export interface Project {
 }
 
 export const PROJECTS: Record<string, Project> = Object.fromEntries(
-  Object.entries(devnet.projects).map(([id, p]) => [id, { id, title: p.title, site: p.site }]),
+  Object.entries(mainnet.projects).map(([id, p]) => [id, { id, title: p.title, site: p.site }]),
 );
 
 export interface KnownCollection {
@@ -23,16 +22,16 @@ export interface KnownCollection {
   maxSupply: number;
 }
 
-export const COLLECTIONS: KnownCollection[] = devnet.collections
-  .filter((c) => TESTNET || !("testnetOnly" in c && c.testnetOnly))
-  .map(({ id, project, title, address, maxSupply }) => ({ id, project, title, address, maxSupply }));
+export const COLLECTIONS: KnownCollection[] = (mainnet.collections as KnownCollection[]).map(
+  ({ id, project, title, address, maxSupply }) => ({ id, project, title, address, maxSupply }),
+);
 
 export const GENLOSS_URL = PROJECTS.genloss?.site ?? "https://genloss.gl36.org";
 
-export const FEATURED = COLLECTIONS.find((c) => c.project === "genloss" && c.id === "genesis") ?? COLLECTIONS[0];
+export const FEATURED: KnownCollection | undefined =
+  COLLECTIONS.find((c) => c.project === "genloss" && c.id === "genesis") ?? COLLECTIONS[0];
 
-const explorerCluster = TESTNET ? `?cluster=${CLUSTER}` : "";
-export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}${explorerCluster}`;
+export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}`;
 
 export const RENT = { now: 5_080, afterCuts: 696 } as const;
 export const ACCOUNT_OVERHEAD = 128;

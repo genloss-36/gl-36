@@ -14,16 +14,18 @@ SQUIRCLE = 1.4
 CORNER = [(math.cos(t) ** 0.5, math.sin(t) ** 0.5) for t in (i / 16 * math.pi / 2 for i in range(17))]
 
 def account() -> bytes:
-    cfg = json.loads((ROOT / "deployments/devnet.json").read_text())
-    col = next(c for c in cfg["collections"] if c["project"] == "genloss" and c["id"] == "genesis")
-    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "getAccountInfo",
-                       "params": [col["address"], {"encoding": "base64"}]}).encode()
+    cfg = json.loads((ROOT / "deployments/mainnet.json").read_text())
+    col = next((c for c in cfg["collections"] if c["project"] == "genloss" and c["id"] == "genesis"), None)
     try:
+        if col is None:
+            raise LookupError("no GENLOSS Genesis in the registry")
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "getAccountInfo",
+                           "params": [col["address"], {"encoding": "base64"}]}).encode()
         req = urllib.request.Request(cfg["rpc"], body, {"content-type": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as r:
             return base64.b64decode(json.load(r)["result"]["value"]["data"][0])
     except Exception as e:
-        print(f"devnet unavailable ({e}); drawing a stand-in account")
+        print(f"no live account ({e}); drawing a stand-in account")
         rnd = random.Random(36)
         minted = 12
         d = bytearray(HEADER + minted * SLOT)

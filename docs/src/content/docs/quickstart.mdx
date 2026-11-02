@@ -6,7 +6,7 @@ agent: true
 
 import Note from "../../components/Note.astro";
 
-The GL-36 SDK is a small TypeScript package on top of [`@solana/kit`](https://github.com/anza-xyz/kit) 8.5. It runs on Node 20.19+ and in the browser. Everything below targets devnet.
+The GL-36 SDK is a small TypeScript package on top of [`@solana/kit`](https://github.com/anza-xyz/kit) 8.5. It runs on Node 20.19+ and in the browser. Everything below targets Solana mainnet.
 
 ```bash
 npm install @gl36/sdk @solana/kit
@@ -22,10 +22,10 @@ A collection is one account. Fetch it and you have every token, owner and listin
 import { address, createSolanaRpc } from "@solana/kit";
 import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl36/sdk";
 
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
-const COLLECTION = address("3yRDMQHXe3bGxiUcuGxmuSuYb46eCsF2e9kAvcWmJSmm");
+const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
+const COLLECTION = address("<collection address>");
 
-const fetched = await fetchCollection(rpc, COLLECTION, { programId: PROGRAM_ID.devnet });
+const fetched = await fetchCollection(rpc, COLLECTION, { programId: PROGRAM_ID.mainnet });
 const col = fetched!.collection;
 
 console.log(`${col.minted} of ${col.maxSupply} minted, ${collectionState(col)}`);
@@ -35,7 +35,7 @@ for (const slot of listedSlots(col)) {
 }
 ```
 
-That is the whole read path. Owners and listings are fields of the account, so a wallet that wants "tokens owned by X" calls `slotsOwnedBy(col, x)`. Passing `programId` makes the fetch refuse an account the GL-36 program doesn't own.
+Put the address of any GL-36 collection in `COLLECTION`, for example one listed in [Deployments](/docs/deployments/). That is the whole read path. Owners and listings are fields of the account, so a wallet that wants "tokens owned by X" calls `slotsOwnedBy(col, x)`. Passing `programId` makes the fetch refuse an account the GL-36 program doesn't own.
 
 ## Send a transaction
 
@@ -57,7 +57,7 @@ import {
 
 const sendAndConfirm = sendAndConfirmTransactionFactory({
   rpc,
-  rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+  rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.mainnet-beta.solana.com"),
 });
 
 async function send(payer: KeyPairSigner, ixs: Instruction[]) {
@@ -80,7 +80,7 @@ async function send(payer: KeyPairSigner, ixs: Instruction[]) {
 ```ts
 import { mintIx } from "@gl36/sdk";
 
-await send(me, [mintIx(PROGRAM_ID.devnet, me, COLLECTION, col.creator, 3)]);
+await send(me, [mintIx(PROGRAM_ID.mainnet, me, COLLECTION, col.creator, 3)]);
 ```
 
 The new tokens are the last three slots of the account, ids `minted` to `minted + 2` as read before the transaction. The builders check their arguments and throw a `RangeError` for values the program would refuse, before anything is signed.
@@ -92,10 +92,10 @@ Prices are `u32` in units of 1,000 lamports. `solToPrice` and `priceToSol` conve
 ```ts
 import { buyIx, listIx, solToPrice } from "@gl36/sdk";
 
-await send(owner, [listIx(PROGRAM_ID.devnet, owner, COLLECTION, 7, solToPrice("0.25"))]);
+await send(owner, [listIx(PROGRAM_ID.mainnet, owner, COLLECTION, 7, solToPrice("0.25"))]);
 
 const slot = col.slots[7];
-await send(buyer, [buyIx(PROGRAM_ID.devnet, buyer, COLLECTION, slot.owner, col.treasury, 7, slot.price)]);
+await send(buyer, [buyIx(PROGRAM_ID.mainnet, buyer, COLLECTION, slot.owner, col.treasury, 7, slot.price)]);
 ```
 
 The buyer passes the seller and the price they saw. If the seller relists higher or the token changes hands first, the purchase fails instead of paying more. `parseProgramError` turns that failure into a name you can act on:
@@ -104,16 +104,16 @@ The buyer passes the seller and the price they saw. If the seller relists higher
 import { parseProgramError } from "@gl36/sdk";
 
 try {
-  await send(buyer, [buyIx(PROGRAM_ID.devnet, buyer, COLLECTION, slot.owner, col.treasury, 7, slot.price)]);
+  await send(buyer, [buyIx(PROGRAM_ID.mainnet, buyer, COLLECTION, slot.owner, col.treasury, 7, slot.price)]);
 } catch (e) {
-  if (parseProgramError(e, { programId: PROGRAM_ID.devnet })?.name === "SellerMismatch") {
+  if (parseProgramError(e, { programId: PROGRAM_ID.mainnet })?.name === "SellerMismatch") {
     console.log("Sold or moved in the meantime. Read the collection again.");
   }
 }
 ```
 
-<Note label="Devnet SOL">
-  Get test SOL with <code>solana airdrop 1</code> against devnet, or from the Solana faucet. A mint of one token at 0.01 SOL costs about 0.0102 SOL in total: the price, 182,880 lamports of rent and the network fee.
+<Note label="Cost">
+  A mint of one token at 0.01 SOL costs about 0.0102 SOL in total: the price, 182,880 lamports of rent and the network fee.
 </Note>
 
 ## Next

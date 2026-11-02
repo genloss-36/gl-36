@@ -31,11 +31,11 @@ export default function FooterLive({ lang }: { lang: Lang }) {
         <span>
           {tr("foot.generator", { version })} <span className="mono" title={served ?? ""}>{served ? short(served, 6) : ""}</span>{" "}
           <span style={{ color: match === false ? "var(--danger)" : "var(--ink-2)" }}>
-            {match === null ? tr("foot.checking") : match ? `✓ ${tr("foot.verified")}` : tr("foot.mismatch")}
+            {match === null ? (col ? tr("foot.checking") : "") : match ? `✓ ${tr("foot.verified")}` : tr("foot.mismatch")}
           </span>
         </span>
         <span>{tr("foot.program")} <a className="mono" href={explorerAddress(CONFIG.programId)} target="_blank" rel="noreferrer">{short(CONFIG.programId, 6)}</a></span>
-        <span>{tr("foot.collection")} <a className="mono" href={explorerAddress(col.address)} target="_blank" rel="noreferrer">{short(col.address, 6)}</a></span>
+        {col && <span>{tr("foot.collection")} <a className="mono" href={explorerAddress(col.address)} target="_blank" rel="noreferrer">{short(col.address, 6)}</a></span>}
         <span><a href={DOCS_URL}>{tr("foot.docs")}</a></span>
       </div>
       <details>

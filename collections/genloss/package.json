@@ -14,7 +14,7 @@
     "check": "astro check --root site",
     "test": "node --conditions=source --test test/*.test.ts",
     "generator": "node generator/check.mjs",
-    "seed": "node --conditions=source scripts/seed.ts"
+    "launch": "node --conditions=source scripts/launch.ts"
   },
   "dependencies": {
     "@astrojs/react": "7.1.1",
@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
-    "@gl36/devnet": "*",
+    "@gl36/cluster": "*",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "typescript": "5.9.3"

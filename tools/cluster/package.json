@@ -1,14 +1,11 @@
 {
-  "name": "@gl36/devnet",
+  "name": "@gl36/cluster",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Cluster helpers for scripts that deploy and exercise GL-36 on devnet or a local validator.",
+  "description": "Cluster helpers for scripts that deploy GL-36 collections.",
   "exports": {
     ".": "./scripts/cluster.ts"
-  },
-  "scripts": {
-    "e2e": "node --conditions=source scripts/devnet-e2e.ts"
   },
   "dependencies": {
     "@gl36/sdk": "*",

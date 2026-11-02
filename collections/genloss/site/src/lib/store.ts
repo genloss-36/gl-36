@@ -9,9 +9,9 @@ function initialCollection(): string {
     const fromUrl = new URLSearchParams(location.search).get("c");
     const saved = localStorage.getItem(COL_KEY);
     const ids = COLLECTIONS.map((c) => c.id);
-    return [fromUrl, saved].find((v) => v && ids.includes(v)) ?? COLLECTIONS[0].id;
+    return [fromUrl, saved].find((v) => v && ids.includes(v)) ?? COLLECTIONS[0]?.id ?? "";
   } catch {
-    return COLLECTIONS[0].id;
+    return COLLECTIONS[0]?.id ?? "";
   }
 }
 
@@ -20,7 +20,7 @@ $collectionId.listen((id) => {
   try { localStorage.setItem(COL_KEY, id); } catch {}
 });
 
-export const collectionCfg = (): CollectionCfg =>
+export const collectionCfg = (): CollectionCfg | undefined =>
   COLLECTIONS.find((c) => c.id === $collectionId.get()) ?? COLLECTIONS[0];
 
 export interface ChainState {
@@ -35,7 +35,6 @@ export const $chain = atom<ChainState | null>(null);
 export const $chainError = atom<string | null>(null);
 
 export interface WalletState {
-  kind: "standard" | "burner";
   name: string;
   icon?: string;
   address: string;

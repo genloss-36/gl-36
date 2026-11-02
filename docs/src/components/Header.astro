@@ -1,6 +1,5 @@
 ---
 import Mark from "./Mark.astro";
-import { TESTNET, CLUSTER } from "../lib/config";
 
 interface Props {
   current?: "home" | "docs" | "reference" | "inspector";
@@ -38,14 +37,6 @@ const links = [
         <span class="t">Search</span>
         <kbd data-kbd aria-hidden="true">⌘K</kbd>
       </button>
-      {
-        TESTNET && (
-          <span class="pill net" title={`Program deployed on ${CLUSTER}`}>
-            <span class="dot" />
-            {CLUSTER === "devnet" ? "Devnet" : CLUSTER}
-          </span>
-        )
-      }
       <button class="icon press" type="button" data-theme-toggle aria-label="Switch to light theme">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
@@ -176,7 +167,6 @@ const links = [
     gap: 8px;
   }
   .search-btn,
-  .net,
   .icon {
     --fill: var(--bg-elev-2);
     height: 32px;
@@ -219,10 +209,6 @@ const links = [
     font-family: var(--font-sans);
     font-size: 11px;
     color: var(--fg-2);
-  }
-  .net {
-    padding: 0 12px 0 11px;
-    gap: 8px;
   }
   .icon {
     display: grid;
@@ -283,9 +269,6 @@ const links = [
       gap: 16px;
     }
     .links a:nth-child(2) {
-      display: none;
-    }
-    .net {
       display: none;
     }
   }
