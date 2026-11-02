@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  program:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifiable build
+        run: docker run --rm -v "$PWD/program:/build" -w /build solanafoundation/solana-verifiable-build:4.3.0 cargo build-sbf --arch v3 -- --locked
+      - name: Executable hash
+        run: |
+          hash=$(python3 -c "import hashlib; print(hashlib.sha256(open('program/target/deploy/gl36.so', 'rb').read().rstrip(b'\0')).hexdigest())")
+          echo "$hash"
+          echo "gl36.so executable hash: \`$hash\`" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gl36-so
+          path: program/target/deploy/gl36.so
+          if-no-files-found: error
+
+  test:
+    needs: program
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: gl36-so
+          path: program/target/deploy
+      - run: test -f program/target/deploy/gl36.so
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run check
+      - run: npm run build -w gl36-docs
+      - run: npm run build -w genloss
+      - name: Generator vectors
+        run: npm run generator -w genloss -- 36 && git diff --exit-code collections/genloss/generator/vectors.json
