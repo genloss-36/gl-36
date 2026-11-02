@@ -4,7 +4,7 @@ use pinocchio::{
     AccountView, Address, ProgramResult, Resize,
 };
 use pinocchio_log::log;
-use pinocchio_system::instructions::{CreateAccount, Transfer};
+use pinocchio_system::instructions::{Allocate, Assign, CreateAccount, Transfer};
 
 use crate::{error::Error, state::*, util::*};
 
@@ -52,8 +52,18 @@ pub fn init(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
         Seed::from(&nonce),
         Seed::from(&bump_seed),
     ];
-    CreateAccount::with_minimum_balance(creator, collection, HEADER_LEN as u64, program_id, None)?
-        .invoke_signed(&[Signer::from(&seeds)])?;
+    let pda_signer = [Signer::from(&seeds)];
+    if collection.lamports() == 0 {
+        CreateAccount::with_minimum_balance(creator, collection, HEADER_LEN as u64, program_id, None)?
+            .invoke_signed(&pda_signer)?;
+    } else {
+        let top_up = rent_min(HEADER_LEN)?.saturating_sub(collection.lamports());
+        if top_up > 0 {
+            Transfer { from: creator, to: collection, lamports: top_up }.invoke()?;
+        }
+        Allocate { account: collection, space: HEADER_LEN as u64 }.invoke_signed(&pda_signer)?;
+        Assign { account: collection, owner: program_id }.invoke_signed(&pda_signer)?;
+    }
 
     let mut d = collection.try_borrow_mut()?;
     d[OFF_TAG] = TAG;
@@ -109,7 +119,9 @@ pub fn mint(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
     if need > 0 {
         Transfer { from: minter, to: collection, lamports: need }.invoke()?;
     }
-    let cost = mint_price * count as u64;
+    let cost = mint_price
+        .checked_mul(count as u64)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
     if cost > 0 {
         Transfer { from: minter, to: creator, lamports: cost }.invoke()?;
     }

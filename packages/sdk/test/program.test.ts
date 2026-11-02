@@ -147,6 +147,33 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
       fails(await send(c.svm, c.creator, [initIx(c.programId, c.creator, c.collection, c.treasury.address, base)]));
       fails(await send(c.svm, c.creator, [initIx(c.programId, c.creator, c.collection, c.treasury.address, { ...base, nonce: 0 })]));
     });
+
+    test("can't be blocked by lamports sent to the address first", async () => {
+      const c = await setup(10);
+      const base = { maxSupply: 10, feeBps: 0, mintPrice: 0n, provenance, generatorHash };
+      const min = c.svm.minimumBalanceForRentExemption(BigInt(HEADER_LEN));
+
+      const [dust] = await findCollection(c.programId, c.creator.address, 1);
+      c.svm.airdrop(dust, lamports(1_000_000n));
+      ok(await send(c.svm, c.creator, [initIx(c.programId, c.creator, dust, c.treasury.address, { ...base, nonce: 1 })]));
+      const s = state({ ...c, collection: dust });
+      assert.equal(s.len, HEADER_LEN);
+      assert.equal(s.lamports, min);
+      assert.equal(s.creator, c.creator.address);
+      const acc = c.svm.getAccount(dust);
+      assert.ok(acc.exists);
+      assert.equal(acc.programAddress, c.programId);
+      ok(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, dust, c.creator.address, 2)]));
+
+      const [rich] = await findCollection(c.programId, c.creator.address, 2);
+      c.svm.airdrop(rich, lamports(SOL));
+      ok(await send(c.svm, c.creator, [initIx(c.programId, c.creator, rich, c.treasury.address, { ...base, nonce: 2 })]));
+      assert.equal(state({ ...c, collection: rich }).lamports, SOL);
+      const creatorBefore = bal(c, c.creator.address);
+      ok(await send(c.svm, c.creator, [withdrawExcessIx(c.programId, c.creator, rich)]));
+      assert.equal(bal(c, c.creator.address) - creatorBefore, SOL - min - 5_000n);
+      fails(await send(c.svm, c.creator, [initIx(c.programId, c.creator, rich, c.treasury.address, { ...base, nonce: 2 })]));
+    });
   });
 
   describe("mint", () => {
@@ -166,6 +193,20 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
       ]);
       assert.ok(s.slots.every((x) => x.price === 0));
       assert.equal(bal(c, c.creator.address) - creatorBefore, 14n * MINT_PRICE);
+    });
+
+    test("refuses a total price that overflows", async () => {
+      const c = await setup(10);
+      const [col] = await findCollection(c.programId, c.creator.address, 1);
+      ok(await send(c.svm, c.creator, [
+        initIx(c.programId, c.creator, col, c.treasury.address, {
+          nonce: 1, maxSupply: 10, feeBps: 0, mintPrice: 2n ** 63n, provenance, generatorHash,
+        }),
+      ]));
+      const creatorBefore = bal(c, c.creator.address);
+      fails(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, col, c.creator.address, 2)]));
+      assert.equal(state({ ...c, collection: col }).minted, 0);
+      assert.equal(bal(c, c.creator.address), creatorBefore);
     });
 
     test("rejects bad batches and a wrong creator", async () => {

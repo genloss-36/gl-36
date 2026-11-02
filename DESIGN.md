@@ -55,7 +55,7 @@ The first data byte is the instruction tag; arguments follow, little-endian. W =
 
 | # | Instruction | Arguments | Accounts | Effect |
 |---|---|---|---|---|
-| 0 | `init` | nonce u32, max_supply u16, fee_bps u16, mint_price u64, provenance [32], generator_hash [32] | creator WS, collection W, treasury, system | Checks the PDA and that the account is empty, then creates it at header size. |
+| 0 | `init` | nonce u32, max_supply u16, fee_bps u16, mint_price u64, provenance [32], generator_hash [32] | creator WS, collection W, treasury, system | Checks the PDA, then creates the account at header size. Lamports already sent to the address are kept and topped up to the rent minimum, so a deposit can't block `init`. |
 | 1 | `mint` | count u8 (1..=10) | minter WS, collection W, creator W, SlotHashes, system | Grows the account, takes `rent_min(new_len) − lamports` and `mint_price * count` from the minter, writes the slots. At `minted == max_supply` it records `entropy`. |
 | 2 | `transfer` | id u16 | owner S, collection W, new_owner | Sets `owner` and clears `price`. |
 | 3 | `list` | id u16, price u32 | owner S, collection W | Sets the price; `0` delists. |
@@ -78,7 +78,7 @@ Rent is read from the `Rent` sysvar at the time of each operation. Under SIMD-04
 | Collection header (creator) | ≈ 0.0018 SOL | ≈ 0.00025 SOL |
 | One token, 36 bytes (minter) | 182,880 lamports ≈ 0.00018 SOL | 25,056 lamports |
 | 5,000 tokens | ≈ 0.92 SOL, paid by minters | ≈ 0.126 SOL |
-| Program, 19.6 KB | ≈ 0.14 SOL, refundable | ≈ 0.02 SOL |
+| Program, 21.6 KB | ≈ 0.11 SOL, refundable | ≈ 0.015 SOL |
 
 Measured, instructions cost between about 400 compute units (`transfer`) and 3,300 (`init`, `mint` of 10).
 
@@ -160,7 +160,7 @@ Measured, instructions cost between about 400 compute units (`transfer`) and 3,3
 
 - **Layout.** Shared: `program/`, `packages/sdk/` (`@gl36/sdk`), `docs/`, `deployments/` (`@gl36/deployments`), `tools/cluster/` (`@gl36/cluster`: keys, RPC and send-and-confirm helpers). Per mint: `collections/<name>/`, one workspace package named after the project, holding its generator, its site (`site/`, run with `astro --root site`), its deploy script and tests.
 - **Registry.** `deployments/mainnet.json` has `cluster`, `rpc`, `programId`, `projects` (title, site and generator hash per project) and `collections` (id, project, title, address, supply, mint price). A project's deploy script rewrites only its own entries and keeps the rest.
-- **GENLOSS deploy.** `collections/genloss/scripts/launch.ts` (`npm run launch -w genloss`) creates Genesis (5,000 supply, 0.01 SOL mint, unrevealed) if it doesn't exist and records it in the registry. It keeps the registry's public RPC, so a private `RPC_URL` never lands in the repository. Collection nonces are derived from the generator's hash, so after a generator change a new run creates a collection whose `generator_hash` matches.
+- **GENLOSS deploy.** `collections/genloss/scripts/launch.ts` (`npm run launch -w genloss`) creates Genesis (5,000 supply, 0.01 SOL mint, unrevealed) if it doesn't exist, funds the treasury up to the rent-exempt minimum so that small sales can pay their fee, and records the collection in the registry. It keeps the registry's public RPC, so a private `RPC_URL` never lands in the repository. Collection nonces are derived from the generator's hash, so after a generator change a new run creates a collection whose `generator_hash` matches.
 
 ## Sources
 

@@ -35,7 +35,7 @@ Store `secret` offline, like a private key. It is needed once, for `reveal`, and
 | `maxSupply` | 1–65,535. |
 | `mintPrice` | Lamports per token as a `bigint`, paid to the creator. `0n` for a free mint. |
 | `feeBps` | 0–1,000. Market fee on every sale, paid to `treasury`. There are no royalties. |
-| `treasury` | Receives the fee; can be the creator's own address. |
+| `treasury` | Receives the fee; can be the creator's own address. Fund it with the rent-exempt minimum for an empty account (`getMinimumBalanceForRentExemption(0)`) before the first sale: until it holds that much, a sale whose fee is smaller fails with `InsufficientFundsForRent`. |
 
 ## 4. Initialize
 
@@ -90,4 +90,4 @@ Tell the creator that this surplus includes rent minters paid for their slots, a
 
 ## Checklist before `init`
 
-Generator final and hashed; secret generated and stored offline; nonce unused; treasury address correct; fee and price as intended; every transaction simulated first.
+Generator final and hashed; secret generated and stored offline; nonce unused; treasury address correct and funded; fee and price as intended; every transaction simulated first.

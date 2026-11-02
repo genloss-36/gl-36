@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  AccountRole,
   appendTransactionMessageInstructions,
   createKeyPairSignerFromBytes,
   createSolanaRpc,
@@ -16,7 +17,7 @@ import {
   type Instruction,
   type KeyPairSigner,
 } from "@solana/kit";
-import { decodeCollection } from "@gl36/sdk";
+import { SYSTEM_PROGRAM, decodeCollection } from "@gl36/sdk";
 
 export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
 export const RPC_URL = process.env.RPC_URL ?? PUBLIC_RPC;
@@ -71,12 +72,27 @@ export async function send(step: string, payer: KeyPairSigner, ixs: Instruction[
   return sig;
 }
 
+export function systemTransfer(from: KeyPairSigner, to: Address, lamports: bigint): Instruction {
+  const data = new Uint8Array(12);
+  const v = new DataView(data.buffer);
+  v.setUint32(0, 2, true);
+  v.setBigUint64(4, lamports, true);
+  return {
+    programAddress: SYSTEM_PROGRAM,
+    accounts: [
+      { address: from.address, role: AccountRole.WRITABLE_SIGNER, signer: from },
+      { address: to, role: AccountRole.WRITABLE },
+    ],
+    data,
+  } as Instruction;
+}
+
 export const balance = async (a: Address) =>
   (await call(() => rpc.getBalance(a, { commitment: "confirmed" }).send())).value;
 
 export async function collectionState(a: Address) {
   const { value } = await call(() => rpc.getAccountInfo(a, { encoding: "base64", commitment: "confirmed" }).send());
-  if (!value) return null;
+  if (!value || !value.data[0]) return null;
   const data = new Uint8Array(Buffer.from(value.data[0], "base64"));
   return { ...decodeCollection(data), lamports: value.lamports, len: data.length };
 }

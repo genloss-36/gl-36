@@ -94,7 +94,7 @@ Returned as `ProgramError::Custom(code)`, shown as `custom program error: 0x…`
 | 16 | `0x10` | `SameOwner` | `transfer` to the current owner |
 | 17 | `0x11` | `BadSysvar` | SlotHashes account wrong or empty |
 
-Built-in errors: `InvalidInstructionData` (unknown tag or wrong data length), `NotEnoughAccountKeys`, `MissingRequiredSignature`, `InvalidAccountOwner` (collection not owned by the program), `Immutable` (collection not writable), `InvalidAccountData` (wrong tag, version or length), `InvalidSeeds` (`init` with the wrong PDA). Insufficient funds come from the System Program's transfer CPIs, also as custom `0x1`; tell them apart by which program's `failed:` line appears first in the logs.
+Built-in errors: `InvalidInstructionData` (unknown tag or wrong data length), `NotEnoughAccountKeys`, `MissingRequiredSignature`, `InvalidAccountOwner` (collection not owned by the program), `Immutable` (collection not writable), `InvalidAccountData` (wrong tag, version or length), `InvalidSeeds` (`init` with the wrong PDA), `ArithmeticOverflow` (`mint_price × count` doesn't fit in a u64). Insufficient funds come from the System Program's transfer CPIs, also as custom `0x1`; tell them apart by which program's `failed:` line appears first in the logs.
 
 ## Logs
 

@@ -84,5 +84,5 @@ await send(creator, [withdrawExcessIx(PROGRAM, creator, collection)]);
 ```
 
 <Note label="Checklist">
-  Generator final and hashed · secret stored offline · nonce unused · treasury address correct · fee and price as intended. None of these can be edited after <code>init</code>.
+  Generator final and hashed · secret stored offline · nonce unused · treasury address correct and funded with the rent-exempt minimum · fee and price as intended. None of these but the treasury's balance can be edited after <code>init</code>.
 </Note>

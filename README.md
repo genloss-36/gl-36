@@ -52,7 +52,7 @@ cd program && cargo build-sbf
 npm install && npm test
 ```
 
-`npm test` runs the SDK's tests (byte layouts, builders, log and error parsing, prices and seeds, then the LiteSVM suite against `program/target/deploy/gl36.so`: normal flows and attacks such as stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, wrong reveal secrets, and withdrawals by anyone but the creator) and each collection's own tests. Without a built program the LiteSVM part is skipped.
+`npm test` runs the SDK's tests (byte layouts, builders, log and error parsing, prices and seeds, then the LiteSVM suite against `program/target/deploy/gl36.so`: normal flows and attacks such as stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, a deposit sent to the collection address before `init`, an overflowing mint price, wrong reveal secrets, and withdrawals by anyone but the creator) and each collection's own tests. Without a built program the LiteSVM part is skipped.
 
 | Command | Does |
 |---|---|

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { findCollection, initIx } from "@gl36/sdk";
-import { PUBLIC_RPC, RPC_URL, balance, collectionState, loadKey, root, send, sol } from "@gl36/cluster";
+import { PUBLIC_RPC, RPC_URL, balance, call, collectionState, loadKey, root, rpc, send, sol, systemTransfer } from "@gl36/cluster";
 
 const PROJECT = "genloss";
 const generatorHash = createHash("sha256").update(readFileSync(new URL("../generator/genloss-gen.js", import.meta.url))).digest();
@@ -32,6 +32,11 @@ async function main() {
   }
   const state = await collectionState(address);
   console.log(`${s.name}: ${address} minted ${state!.minted}/${state!.maxSupply} flags ${state!.flags}`);
+
+  const floor = BigInt(await call(() => rpc.getMinimumBalanceForRentExemption(0n).send()));
+  const held = await balance(treasury.address);
+  if (held < floor) await send("treasury: fund", creator, [systemTransfer(creator, treasury.address, floor - held)]);
+  console.log(`treasury ${treasury.address} (${sol(await balance(treasury.address))} SOL)`);
 
   const cfgPath = root("deployments/mainnet.json");
   const prev = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, "utf8")) : {};

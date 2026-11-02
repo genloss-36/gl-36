@@ -53,6 +53,8 @@ seller = p − fee                   → seller
 
 With `fee_bps = 0` the treasury receives nothing and its transfer is skipped.
 
+Solana doesn't let an empty account receive less than the rent-exempt minimum for an account without data, about 0.00065 SOL at 5,080 lamports per byte. Until the treasury holds that much, a sale whose fee is smaller fails with `InsufficientFundsForRent`, so fund the treasury once at launch. The same applies to a seller whose wallet is empty.
+
 ## No royalties
 
 GL-36 has no royalty mechanism. A royalty would need an extra account and an extra transfer in every `buy`, and `transfer` would bypass it anyway: any sale can be settled off-chain followed by a free transfer. A collection that wants a cut of trading sets `fee_bps` and points `treasury` at itself.

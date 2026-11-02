@@ -38,9 +38,11 @@ Creates a collection account at the PDA `["col", creator, nonce]` with a 224-byt
 | # | Account | Access | Notes |
 | ---: | --- | --- | --- |
 | 0 | creator | W S | pays rent for the header |
-| 1 | collection | W | the PDA, empty |
+| 1 | collection | W | the PDA |
 | 2 | treasury | | stored in the header |
 | 3 | System Program | | |
+
+If someone has already sent lamports to the address, `init` keeps them, tops the account up to the rent minimum and takes it over, so a deposit can't block a launch. Anything above the minimum can be taken out with `withdraw_excess`.
 
 Fails with `BadSupply` (12) if `max_supply` is 0, `BadFee` (11) if `fee_bps` > 1,000, `InvalidSeeds` if the collection isn't the PDA for this creator and nonce. Logs `init <max_supply>`.
 
@@ -66,7 +68,7 @@ Mints `count` tokens to the signer. Grows the account by `count × 36` bytes.
 3. Resizes the account and writes the minter as owner of each new slot, with price `0`.
 4. If `minted` reaches `max_supply`, writes the latest slot hash as `entropy` and sets `CLOSED`.
 
-Fails with `BadBatch` (2), `WrongCreator` (13), `MintClosed` (10), `SoldOut` (1), and `BadSysvar` (17) on the mint that closes the collection. Logs `mint <first_id> <count>`.
+Fails with `BadBatch` (2), `WrongCreator` (13), `MintClosed` (10), `SoldOut` (1), `ArithmeticOverflow` if `mint_price × count` doesn't fit in a u64, and `BadSysvar` (17) on the mint that closes the collection. Logs `mint <first_id> <count>`.
 
 ## transfer
 
