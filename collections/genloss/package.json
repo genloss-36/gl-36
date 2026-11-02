@@ -9,6 +9,7 @@
     "dev": "cd site && astro dev",
     "prebuild": "node site/scripts/sync-generator.mjs",
     "build": "astro build --root site",
+    "deploy": "wrangler deploy",
     "preview": "astro preview --root site",
     "check": "astro check --root site",
     "test": "node --conditions=source --test test/*.test.ts",

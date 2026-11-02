@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "genloss",
+  "compatibility_date": "2026-11-02",
+  "assets": {
+    "directory": "./site/dist"
+  },
+  "routes": [{ "pattern": "genloss.gl36.org", "custom_domain": true }]
+}
