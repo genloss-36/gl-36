@@ -15,7 +15,7 @@ GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the own
 - Agent skill: [`skills/gl36`](skills/gl36) for Claude Code, Codex, Cursor and other coding agents
 - First collection: [GENLOSS](collections/genloss), minted at [genloss.gl36.org](https://genloss.gl36.org)
 
-> The program has not been audited. See [SECURITY.md](SECURITY.md).
+> The program hasn't had a third-party audit yet. It is open source, its deployed binary is [verified by OtterSec](https://verify.osec.io/status/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb) to match this repository, and a LiteSVM suite covers normal flows and attacks: stale prices, wrong sellers and treasuries, missing signatures, foreign accounts, early or repeated settles. See [SECURITY.md](SECURITY.md).
 
 ## Repository
 
