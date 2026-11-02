@@ -1,10 +1,13 @@
-import devnet from "../data/devnet.json";
+import devnet from "@gl36/deployments/devnet.json";
 
 export const CONFIG = devnet;
 export type CollectionCfg = (typeof devnet.collections)[number];
 
 export const TESTNET = CONFIG.cluster !== "mainnet-beta";
-export const COLLECTIONS: CollectionCfg[] = CONFIG.collections.filter((c) => TESTNET || !("testnetOnly" in c && c.testnetOnly));
+export const PROJECT = "genloss";
+export const COLLECTIONS: CollectionCfg[] = CONFIG.collections.filter(
+  (c) => c.project === PROJECT && (TESTNET || !("testnetOnly" in c && c.testnetOnly)),
+);
 
 export const DOCS_URL = "https://gl36.org";
 export const CHAIN = TESTNET ? "solana:devnet" : "solana:mainnet";

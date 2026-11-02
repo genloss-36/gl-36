@@ -17,7 +17,7 @@ import { address, createSolanaRpc } from "@solana/kit";
 import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl36/sdk";
 
 const rpc = createSolanaRpc("https://api.devnet.solana.com");
-const fetched = await fetchCollection(rpc, address("GehEdxo8dmv24vR8Gzv539bfA4dhgTRF2NMPcz8TDi2g"), {
+const fetched = await fetchCollection(rpc, address("3yRDMQHXe3bGxiUcuGxmuSuYb46eCsF2e9kAvcWmJSmm"), {
   programId: PROGRAM_ID.devnet,
 });
 const col = fetched!.collection;

@@ -4,15 +4,15 @@ from PIL import Image, ImageDraw, ImageFont
 
 DOCS = Path(__file__).resolve().parent.parent
 ROOT = DOCS.parent
-FONT = DOCS / "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2"
+FONT = next(p for p in (d / "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" for d in (DOCS, ROOT)) if p.exists())
 W, H, M = 1200, 630, 64
 SS = 2
 INK, INK2, BG = (245, 245, 247), (161, 161, 166), (0, 0, 0)
 HEADER, SLOT, COLS = 224, 36, 36
 
 def account() -> bytes:
-    cfg = json.loads((ROOT / "web/src/data/devnet.json").read_text())
-    col = next(c for c in cfg["collections"] if c["id"] == "genesis")
+    cfg = json.loads((ROOT / "deployments/devnet.json").read_text())
+    col = next(c for c in cfg["collections"] if c["project"] == "genloss" and c["id"] == "genesis")
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "getAccountInfo",
                        "params": [col["address"], {"encoding": "base64"}]}).encode()
     try:

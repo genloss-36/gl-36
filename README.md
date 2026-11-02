@@ -2,25 +2,25 @@
 
 GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the owner and 4 for a listing price. A whole collection lives in one program-owned account, so there are no mint, token or metadata accounts per NFT, no indexer, and trading is built into the program.
 
-GENLOSS is the first mint on GL-36: 5,000 generative images, each saved as JPEG over and over until it fell apart. The art is not stored anywhere. Every browser draws it from an on-chain seed with a deterministic generator whose hash is pinned in the collection account.
-
-- Mint: [genloss.gl36.org](https://genloss.gl36.org)
 - Docs: [gl36.org](https://gl36.org)
 - SDK: [`@gl36/sdk`](packages/sdk) on npm
+- First collection: [GENLOSS](collections/genloss), minted at [genloss.gl36.org](https://genloss.gl36.org)
 
 > The program is unaudited and deployed on devnet only. Do not use it with real funds. See [SECURITY.md](SECURITY.md).
 
 ## Repository
 
+The standard and everything shared sits at the top level. Each mint built on it is a project of its own under `collections/`.
+
 | Path | What it is |
 |---|---|
 | [`program/`](program) | The on-chain program, Rust with [Pinocchio](https://github.com/anza-xyz/pinocchio) 0.12, built to `gl36.so` (sBPF v3) |
 | [`packages/sdk/`](packages/sdk) | `@gl36/sdk`: instruction builders, account decoding, RPC reads, logs and errors on [@solana/kit](https://github.com/anza-xyz/kit), with unit and LiteSVM tests |
-| [`devnet/`](devnet) | Scripts that deploy demo collections and run every instruction on a live cluster |
-| [`generator/`](generator) | `genloss-gen.js`, the deterministic GENLOSS art generator, with test vectors and a preview page |
-| [`web/`](web) | The GENLOSS mint site: Astro + React islands, English and Chinese |
-| [`docs/`](docs) | The GL-36 docs site at gl36.org: Astro + MDX, with an account inspector |
-| [`DESIGN.md`](DESIGN.md) | Account layout, instructions, generator, and how both sites are built |
+| [`docs/`](docs) | The docs site at gl36.org: Astro + MDX, with an account inspector |
+| [`deployments/`](deployments) | `@gl36/deployments`: where the program and every collection are deployed, per cluster |
+| [`tools/devnet/`](tools/devnet) | `@gl36/devnet`: cluster helpers for deploy scripts, and a run of every instruction against a live cluster |
+| [`collections/genloss/`](collections/genloss) | GENLOSS: its art generator, mint site and deploy script |
+| [`DESIGN.md`](DESIGN.md) | Account layout, instructions, costs, and how the SDK, the docs and GENLOSS are built |
 
 ## How it works
 
@@ -36,11 +36,11 @@ A collection is a PDA at `["col", creator, nonce_u32_le]`. It starts as a 224-by
 | `reveal` | Publishes the creator's secret; closes the mint if it is still open |
 | `withdraw_excess` | Returns rent above the minimum to the creator after a rent cut |
 
-Each piece's art seed is `sha256("genloss/v1" ‖ collection ‖ secret ‖ entropy ‖ id)`. The creator commits to `secret` before minting, and `entropy` comes from SlotHashes when the mint closes, so nobody can pick rare pieces in advance. There are no royalties.
+A token's content comes from a generator whose hash the collection pins at `init`, run on the seed `sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id)`. The creator commits to `secret` before minting, and `entropy` comes from SlotHashes when the mint closes, so nobody can pick tokens in advance. There are no royalties.
 
 ## Getting started
 
-Requirements: Node 24 or newer (tests and scripts run `.ts` files directly), and for the program, Rust with the [Agave CLI](https://docs.anza.xyz/cli/install) 4.x (`cargo build-sbf`). The root is an npm workspace for `packages/sdk` and `devnet/`; `web/` and `docs/` install on their own.
+Requirements: Node 24 or newer (tests and scripts run `.ts` files directly), and for the program, Rust with the [Agave CLI](https://docs.anza.xyz/cli/install) 4.x (`cargo build-sbf`). The root is one npm workspace for every JavaScript project.
 
 ```bash
 cd program && cargo build-sbf
@@ -50,45 +50,27 @@ cd program && cargo build-sbf
 npm install && npm test
 ```
 
-The SDK's tests cover the byte layouts, builders, log and error parsing, prices and seeds, then load `program/target/deploy/gl36.so` into LiteSVM for the normal flows and the attacks: stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, wrong reveal secrets, and withdrawals by anyone but the creator. Without a built program the LiteSVM part is skipped. `npm run build` compiles the package to `packages/sdk/dist`.
+`npm test` runs the SDK's tests (byte layouts, builders, log and error parsing, prices and seeds, then the LiteSVM suite against `program/target/deploy/gl36.so`: normal flows and attacks such as stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, wrong reveal secrets, and withdrawals by anyone but the creator) and each collection's own tests. Without a built program the LiteSVM part is skipped.
 
-```bash
-node generator/check.mjs 36
-```
-
-This checks the generator's SHA-256, renders ids 0 to 35 twice to prove determinism, and rewrites `generator/vectors.json`; a diff there means the art changed. To browse pieces, serve the folder and open `preview.html`:
-
-```bash
-python3 -m http.server 4173 --directory generator
-```
-
-### Mint site
-
-```bash
-cd web && npm install && npm run dev
-```
-
-`predev` and `prebuild` copy the generator byte for byte to `public/gen/`. The page hashes that file and compares it with the collection's on-chain `generator_hash`. Builds use `https://genloss.gl36.org` for canonical and OpenGraph URLs; set `SITE_URL` to build for another origin.
-
-### Docs site
-
-```bash
-cd docs && npm install && npm run dev
-```
-
-The docs read the program and collection addresses from `web/src/data/devnet.json`, so they follow whatever the seeding script last deployed.
+| Command | Does |
+|---|---|
+| `npm run docs` | Docs site dev server |
+| `npm run genloss` | GENLOSS mint site dev server |
+| `npm run check` | `astro check` for both sites |
+| `npm run build` | Builds the SDK to `packages/sdk/dist` |
+| `npm run e2e -w @gl36/devnet` | Runs every instruction on the cluster and reports compute units and fees |
 
 ## Devnet
 
-Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb?cluster=devnet). Collection addresses are in [`web/src/data/devnet.json`](web/src/data/devnet.json).
+Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb?cluster=devnet). Every collection on it is listed in [`deployments/devnet.json`](deployments/devnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
 
-To run your own deployment, put keypairs in `.keys/` (`deployer.json`, `treasury.json`, `alice.json`, `bob.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then:
+To deploy your own copy, put keypairs in `.keys/` (`deployer.json`, `treasury.json`, `alice.json`, `bob.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run seed -w genloss`. Set `RPC_URL` to use another endpoint.
 
-```bash
-npm run seed -w devnet
-```
+## Adding a collection
 
-It creates a 64-piece revealed Showcase and a 5,000-piece Genesis mint, and writes their addresses to `web/src/data/devnet.json`. Collections are tied to the generator's hash, so running it after a generator change creates fresh ones. `npm run e2e -w devnet` runs every instruction on the cluster and reports compute units and fees. Set `RPC_URL` to use another endpoint.
+1. Create `collections/<name>/` with a `package.json` named `<name>`: its generator, its site if it has one, a deploy script and tests. [GENLOSS](collections/genloss) is the reference.
+2. The deploy script uses `@gl36/sdk` and `@gl36/devnet`, and writes its collections to `deployments/<cluster>.json` under `projects.<name>` and `collections[].project = "<name>"`, leaving other projects' entries alone.
+3. The docs pick the new collections up from the registry; nothing in the shared code changes.
 
 ## License
 

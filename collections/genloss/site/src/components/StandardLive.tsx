@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { HEADER_LEN, SLOT_LEN } from "@protocol";
+import { HEADER_LEN, SLOT_LEN } from "@gl36/sdk";
 import type { Lang } from "../i18n/strings";
 import { $chain } from "../lib/store";
 import { lamportsPerByte } from "../lib/chain";

@@ -26,7 +26,7 @@ export const explorer = (sig: string) =>
   `https://explorer.solana.com/tx/${sig}?cluster=` +
   (local ? `custom&customUrl=${encodeURIComponent(RPC_URL)}` : "devnet");
 
-export const root = (p: string) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
+export const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 export const loadKey = (p: string) =>
   createKeyPairSignerFromBytes(new Uint8Array(JSON.parse(readFileSync(root(p), "utf8"))));
 

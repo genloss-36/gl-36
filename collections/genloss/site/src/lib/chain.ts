@@ -1,5 +1,5 @@
 import { address, createSolanaRpc, devnet, getAddressEncoder, type Address } from "@solana/kit";
-import { FLAG_REVEALED, decodeCollection } from "@protocol";
+import { FLAG_REVEALED, decodeCollection } from "@gl36/sdk";
 import { rpcUrl } from "./config";
 import { $balance, $chain, $chainError, $collectionId, $wallet, collectionCfg } from "./store";
 import { loadGen, type Traits } from "./generator";

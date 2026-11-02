@@ -1,5 +1,5 @@
 ---
-import { CLUSTER, COLLECTIONS, PROGRAM_ID, explorerAddress } from "../lib/config";
+import { CLUSTER, COLLECTIONS, PROGRAM_ID, PROJECTS, explorerAddress } from "../lib/config";
 import { int } from "../lib/format";
 ---
 
@@ -21,13 +21,16 @@ import { int } from "../lib/format";
 <div class="table-wrap">
 <table>
   <thead>
-    <tr><th>Collection</th><th>Address</th><th align="right">Supply</th><th><span class="sr-only">Inspect</span></th></tr>
+    <tr><th>Collection</th><th>Project</th><th>Address</th><th align="right">Supply</th><th><span class="sr-only">Inspect</span></th></tr>
   </thead>
   <tbody>
     {
       COLLECTIONS.map((c) => (
         <tr>
           <td>{c.title}</td>
+          <td>
+            {PROJECTS[c.project] ? <a href={PROJECTS[c.project].site}>{PROJECTS[c.project].title}</a> : c.project}
+          </td>
           <td>
             <a href={explorerAddress(c.address)} target="_blank" rel="noopener">
               <code>{c.address}</code>

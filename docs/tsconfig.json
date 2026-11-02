@@ -4,8 +4,7 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "paths": {
-      "@gl36/sdk": ["../packages/sdk/src/index.ts"],
-      "@devnet": ["../web/src/data/devnet.json"]
+      "@gl36/sdk": ["../packages/sdk/src/index.ts"]
     }
   },
   "include": [".astro/types.d.ts", "src/**/*"],

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { FLAG_CLOSED, SLOT_LEN, mintIx } from "@protocol";
+import { FLAG_CLOSED, SLOT_LEN, mintIx } from "@gl36/sdk";
 import type { Lang } from "../i18n/strings";
 import { COLLECTIONS, CONFIG } from "../lib/config";
 import { $chain, $chainError, $collectionId, $wallet } from "../lib/store";

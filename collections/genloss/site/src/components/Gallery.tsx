@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStore } from "@nanostores/react";
-import type { Slot } from "@protocol";
+import type { Slot } from "@gl36/sdk";
 import type { Lang } from "../i18n/strings";
 import { $chain, $chainError, $selected, $wallet } from "../lib/store";
 import { pad, priceSol } from "../lib/format";

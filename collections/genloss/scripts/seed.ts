@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { Instruction, KeyPairSigner } from "@solana/kit";
 import { findCollection, initIx, listIx, mintIx, revealIx } from "@gl36/sdk";
-import { RPC_URL, balance, collectionState, loadKey, root, send, systemTransfer } from "./cluster.ts";
+import { RPC_URL, balance, collectionState, loadKey, root, send, systemTransfer } from "@gl36/devnet";
 
-const generatorHash = createHash("sha256").update(readFileSync(root("generator/genloss-gen.js"))).digest();
+const PROJECT = "genloss";
+const generatorHash = createHash("sha256").update(readFileSync(new URL("../generator/genloss-gen.js", import.meta.url))).digest();
 const nonceFor = (base: number) => (base ^ generatorHash.readUInt32LE(0)) >>> 0;
 
 function secretFor(name: string) {
@@ -92,17 +92,20 @@ async function main() {
     if (s.reveal && !(state!.flags & 1)) await send(`${s.name}: reveal`, creator, [revealIx(programId, creator, address, secret)]);
     state = await collectionState(address);
     console.log(`${s.name}: ${address} minted ${state!.minted}/${state!.maxSupply} flags ${state!.flags}`);
-    out.push({ id: s.name, title: s.title, address, maxSupply: s.maxSupply, mintPrice: s.mintPrice.toString(), ...(s.testnetOnly && { testnetOnly: true }) });
+    out.push({ id: s.name, project: PROJECT, title: s.title, address, maxSupply: s.maxSupply, mintPrice: s.mintPrice.toString(), ...(s.testnetOnly && { testnetOnly: true }) });
   }
 
-  const cfgPath = root("web/src/data/devnet.json");
-  mkdirSync(dirname(cfgPath), { recursive: true });
+  const cfgPath = root("deployments/devnet.json");
+  const prev = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, "utf8")) : {};
   writeFileSync(cfgPath, JSON.stringify({
     cluster: "devnet",
     rpc: RPC_URL,
     programId,
-    generatorHash: generatorHash.toString("hex"),
-    collections: out,
+    projects: {
+      ...prev.projects,
+      [PROJECT]: { title: "GENLOSS", site: "https://genloss.gl36.org", generatorHash: generatorHash.toString("hex") },
+    },
+    collections: [...(prev.collections ?? []).filter((c: { project?: string }) => c.project !== PROJECT), ...out],
   }, null, 2) + "\n");
   console.log(`\nwrote ${cfgPath}`);
 }

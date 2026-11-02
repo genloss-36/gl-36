@@ -17,7 +17,6 @@ export default defineConfig({
     resolve: {
       alias: {
         "@gl36/sdk": fileURLToPath(new URL("../packages/sdk/src/index.ts", import.meta.url)),
-        "@devnet": fileURLToPath(new URL("../web/src/data/devnet.json", import.meta.url)),
       },
       dedupe: ["@solana/kit"],
     },

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { address as toAddress, isAddress } from "@solana/kit";
-import { buyIx, listIx, transferIx } from "@protocol";
+import { buyIx, listIx, transferIx } from "@gl36/sdk";
 import type { Key, Lang } from "../i18n/strings";
 import { CONFIG, explorerAddress } from "../lib/config";
 import { $chain, $sound, $voice, $wallet, collectionCfg } from "../lib/store";

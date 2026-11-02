@@ -1,0 +1,20 @@
+{
+  "name": "@gl36/devnet",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Cluster helpers for scripts that deploy and exercise GL-36 on devnet or a local validator.",
+  "exports": {
+    ".": "./scripts/cluster.ts"
+  },
+  "scripts": {
+    "e2e": "node --conditions=source scripts/devnet-e2e.ts"
+  },
+  "dependencies": {
+    "@gl36/sdk": "*",
+    "@solana/kit": "8.5.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

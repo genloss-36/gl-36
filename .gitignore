@@ -8,8 +8,8 @@ target/
 .env
 .env.*
 
-web/public/gen/
-generator/sheet-*.png
+collections/*/site/public/gen/
+collections/*/generator/sheet-*.png
 
 .claude/
 skills-lock.json

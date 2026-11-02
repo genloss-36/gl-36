@@ -277,7 +277,7 @@ describe("errors", () => {
 });
 
 describe("seed", () => {
-  test("matches sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id) and the GENLOSS generator", async () => {
+  test("is sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id)", async () => {
     const collection = (await generateKeyPairSigner()).address;
     const secret = new Uint8Array(32).fill(3);
     const entropy = new Uint8Array(32).fill(4);
@@ -291,8 +291,6 @@ describe("seed", () => {
       .digest();
     assert.equal(hex(seed), expected.toString("hex"));
 
-    const gen = await import(new URL("../../../generator/genloss-gen.js", import.meta.url).href);
-    assert.equal(hex(seed), hex(gen.artSeed(new Uint8Array(enc.encode(collection)), secret, entropy, 300)));
 
     assert.equal(hex(await provenanceOf(secret)), createHash("sha256").update(secret).digest("hex"));
     await assert.rejects(async () => provenanceOf(new Uint8Array(3)), RangeError);

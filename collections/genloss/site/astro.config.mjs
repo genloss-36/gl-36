@@ -7,10 +7,10 @@ export default defineConfig({
   integrations: [react()],
   vite: {
     resolve: {
-      alias: { "@protocol": fileURLToPath(new URL("../packages/sdk/src/index.ts", import.meta.url)) },
+      alias: { "@gl36/sdk": fileURLToPath(new URL("../../../packages/sdk/src/index.ts", import.meta.url)) },
       dedupe: ["@solana/kit"],
     },
-    server: { fs: { allow: [".."] } },
+    server: { fs: { allow: ["../../.."] } },
     worker: { format: "es" },
   },
 });

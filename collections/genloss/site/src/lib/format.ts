@@ -1,4 +1,4 @@
-import { PRICE_UNIT } from "@protocol";
+import { PRICE_UNIT } from "@gl36/sdk";
 
 export const short = (a: string, n = 4) => `${a.slice(0, n)}…${a.slice(-n)}`;
 

@@ -1,6 +1,6 @@
 # Design
 
-GL-36 is the technology: an NFT standard on Solana where one token takes 36 bytes. GENLOSS (generation loss) is the first mint on it. The mint lives at `genloss.gl36.org` (`web/`), the technology docs at `gl36.org` (`docs/`). The program crate is `gl36`; the GENLOSS art generator is `generator/genloss-gen.js`.
+GL-36 is the technology: an NFT standard on Solana where one token takes 36 bytes. GENLOSS (generation loss) is the first mint on it. The mint lives at `genloss.gl36.org` (`collections/genloss/site/`), the technology docs at `gl36.org` (`docs/`). The program crate is `gl36`; the GENLOSS art generator is `collections/genloss/generator/genloss-gen.js`. Shared code sits at the top level; each mint is a project under `collections/` (see section 8).
 
 A collection of up to 65,535 tokens is one account holding an array of slots. Art is generated from a seed in the browser, and the market is part of the program. There is no backend, no indexer and no Merkle tree.
 
@@ -82,9 +82,9 @@ Rent is read from the `Rent` sysvar at the time of each operation. Under SIMD-04
 
 Measured on devnet, instructions cost between about 400 compute units (`transfer`) and 3,300 (`init`, `mint` of 10).
 
-## 4. Generator
+## 4. GENLOSS generator
 
-[`generator/genloss-gen.js`](generator/genloss-gen.js), version `genloss-gen/4`: abstract compositions destroyed by simulated JPEG. One dependency-free ES module that runs in Node and browsers. Its sha256 is the collection's `generator_hash`.
+[`collections/genloss/generator/genloss-gen.js`](collections/genloss/generator/genloss-gen.js), version `genloss-gen/4`: abstract compositions destroyed by simulated JPEG. One dependency-free ES module that runs in Node and browsers. Its sha256 is the collection's `generator_hash`.
 
 - **API.** `generate(seed, onStage?)` returns `{ size, rgb, traits }` with a 256×256×3 RGB buffer; `onStage` sees every JPEG generation. `traits(seed)` computes traits without rendering. `artSeed(...)` and `previewSeed(id)` build seeds.
 - **Canonical output** is `sha256(rgb)`. PNGs made through a canvas are for display only.
@@ -95,7 +95,7 @@ Measured on devnet, instructions cost between about 400 compute units (`transfer
 - **Chroma shift** moves the Cb and Cr planes in opposite directions.
 - **Determinism.** Trigonometry comes from tables (the DCT matrix, a 256-entry Q14 sine); noise is integer value noise; square roots are integer. No canvas, `Math.sin/cos/exp/pow/log/sqrt/random`, fonts or `Intl` in any computation. All state is per call: every buffer that carries data between blocks is reset per plane.
 - **PRNG.** sfc32, one stream per aspect: `sha256(seed ‖ "traits" | "composition" | "genloss" | "glitch" | …)`.
-- **Verification.** [`generator/vectors.json`](generator/vectors.json) holds `sha256(rgb)` for preview ids 0–35; `node generator/check.mjs 36` re-renders them twice.
+- **Verification.** [`collections/genloss/generator/vectors.json`](collections/genloss/generator/vectors.json) holds `sha256(rgb)` for preview ids 0–35; `npm run generator -w genloss -- 36` re-renders them twice. `collections/genloss/test/` checks that its seeds equal the SDK's `tokenSeed` with the `genloss/v1` domain and that the registry pins its hash.
 
 | Trait | Values (weight) |
 |---|---|
@@ -116,28 +116,28 @@ Measured on devnet, instructions cost between about 400 compute units (`transfer
 | Deep Fried | 6–10 | 4–8 | saturation, contrast, sharpening |
 | Legendary | 40–60 | 1–3 | 4:1 chroma subsampling; only blocks remain |
 
-## 5. Mint site (`web/`)
+## 5. GENLOSS mint site (`collections/genloss/site/`)
 
 - **Stack.** Astro 7, static output, two pages: `/` in English and `/zh/` in Simplified Chinese. React islands, nanostores for shared state, @solana/kit for transactions.
 - **Wallets.** Any Wallet Standard wallet: kit builds the transaction, the wallet signs it (`solana:signTransaction`), the page sends it. On devnet there is also a throwaway test wallet kept in localStorage.
 - **Data.** No indexer: the whole collection is one `getAccountInfo`, polled every 12 seconds and after each transaction.
 - **Art integrity.** The generator is not bundled. It is served byte for byte from `public/gen/genloss-gen.js` (copied by `predev` and `prebuild`), hashed by the page, compared with the collection's `generator_hash`, and the result is shown in the footer. Rendering runs in a pool of Web Workers.
-- **Testnet only.** The Showcase collection is marked `testnetOnly`. It, the test wallet, the test SOL button, the Devnet label and the footer note all depend on `TESTNET` in `web/src/lib/config.ts` (`cluster !== "mainnet-beta"`). A mainnet config shows one collection.
+- **Testnet only.** The Showcase collection is marked `testnetOnly`. It, the test wallet, the test SOL button, the Devnet label and the footer note all depend on `TESTNET` in `collections/genloss/site/src/lib/config.ts` (`cluster !== "mainnet-beta"`). A mainnet config shows one collection. The site reads `@gl36/deployments` and keeps only collections whose `project` is `genloss`.
 - **Design language,** derived from JPEG:
   - warm ink (#ebe7e0) on black; only the art is in full colour. The Cb/Cr pair (blue #3d5afe, red #ff4930) appears only in motion: hover, focus and the hero;
   - Archivo Variable, its width axis used as "quality": headings sit at 68% width and resolve from a wider cut in 8 steps;
   - rectangular forms (2 px radius), an 8 px grid, block progress bars;
   - quantised motion: pieces load like progressive JPEG (8 → 16 → … → 256 px), panels open in steps, the cursor is a block snapping to the 8 px grid.
-- **Live hero** ([`web/src/gl/live-loss.ts`](web/src/gl/live-loss.ts)): a WebGL2 feedback loop re-saves a piece as JPEG 30 times a second (YCbCr → 8×8 DCT → quantisation → inverse DCT, four separable passes). The cursor drags blocks like datamosh and lets the original show through; fast movement lowers the quality. Without WebGL2 and float textures it shows a still.
+- **Live hero** ([`collections/genloss/site/src/gl/live-loss.ts`](collections/genloss/site/src/gl/live-loss.ts)): a WebGL2 feedback loop re-saves a piece as JPEG 30 times a second (YCbCr → 8×8 DCT → quantisation → inverse DCT, four separable passes). The cursor drags blocks like datamosh and lets the original show through; fast movement lowers the quality. Without WebGL2 and float textures it shows a still.
 - **Decay story.** A piece sticks to the screen while scrolling steps through its generations.
-- **Sound** ([`web/src/audio/engine.ts`](web/src/audio/engine.ts)): generative ambient in WebAudio, no samples, in the spirit of Selected Ambient Works. Each piece gets its own song. The composition picks one of six styles: beatless pads, a dark drone, a half-time drum machine, a pulse arpeggio over four on the floor, a music-box melody, or a slow broken beat. The seed picks tempo, key, chords, voicing, timbres, patterns and melody. The palette picks the mode, compression darkens the master, generations and mosh add tape wow, glitch makes it skip, chroma widens the stereo. Sound is on by default and starts with the first gesture; "Listen" in a piece's card hands the music to that piece with a tape-stop transition.
-- **SEO and previews.** `web/src/layouts/Base.astro` sets the title, description, canonical, hreflang (en, zh-CN, x-default), OpenGraph and Twitter cards; `robots.txt` and `sitemap.xml` are endpoints. Absolute URLs come from `https://genloss.gl36.org` or `SITE_URL`. The cards `public/og.png` and `og-zh.png` (1200×630) are drawn by `web/scripts/og/`: mark and name, one title, two lines and a row of seven real pieces.
+- **Sound** ([`collections/genloss/site/src/audio/engine.ts`](collections/genloss/site/src/audio/engine.ts)): generative ambient in WebAudio, no samples, in the spirit of Selected Ambient Works. Each piece gets its own song. The composition picks one of six styles: beatless pads, a dark drone, a half-time drum machine, a pulse arpeggio over four on the floor, a music-box melody, or a slow broken beat. The seed picks tempo, key, chords, voicing, timbres, patterns and melody. The palette picks the mode, compression darkens the master, generations and mosh add tape wow, glitch makes it skip, chroma widens the stereo. Sound is on by default and starts with the first gesture; "Listen" in a piece's card hands the music to that piece with a tape-stop transition.
+- **SEO and previews.** `collections/genloss/site/src/layouts/Base.astro` sets the title, description, canonical, hreflang (en, zh-CN, x-default), OpenGraph and Twitter cards; `robots.txt` and `sitemap.xml` are endpoints. Absolute URLs come from `https://genloss.gl36.org` or `SITE_URL`. The cards `public/og.png` and `og-zh.png` (1200×630) are drawn by `collections/genloss/site/scripts/og/`: mark and name, one title, two lines and a row of seven real pieces.
 - **Accessibility.** Text contrast is at least 4.5:1; the piece card is a modal dialog that traps and restores focus; reduced motion stops every animation.
 
 ## 6. Docs site (`docs/`)
 
 - **What it is.** The GL-36 technology site: rent savings, account layout, instructions, errors, the SDK, deployments. GENLOSS appears only under Deployments.
-- **Stack.** Astro 7, static output, MDX pages (`docs/src/content/docs/*.mdx`, sidebar order in `docs/src/data/nav.ts`), no React: interaction is plain `<script>`. The decoder comes from the SDK source (`packages/sdk/src`) through the `@gl36/sdk` alias, and addresses from `web/src/data/devnet.json` through `@devnet`, so the docs follow the last seeding run.
+- **Stack.** Astro 7, static output, MDX pages (`docs/src/content/docs/*.mdx`, sidebar order in `docs/src/data/nav.ts`), no React: interaction is plain `<script>`. The decoder comes from the SDK source (`packages/sdk/src`) through the `@gl36/sdk` alias, and addresses from the `@gl36/deployments` registry, so the docs follow the last deploy of every project. The Deployments page lists each collection with its project and site.
 - **Design.** Black and white, large sentence-case headings without full stops (system SF Pro Bold, −0.03em tracking, 0.94 leading), small 13–14 px UI, hairlines, 24 px card radius, an inverted footer. Dark theme by default with a remembered light toggle. Code uses Xcode Default colours in both themes (`docs/src/lib/code-themes.mjs`, Shiki with CSS variables).
 - **Hero.** The live Genesis account from devnet fills the first screen as a raster: one cell per byte, dot size by byte value; the first rows are the header, then one row per token (32 owner bytes and 4 price bytes). Dots are muted (`--field-ink`) and fade towards the heading; the field under the cursor lights up and is decoded in a caption. On narrow screens cells stay at least 22 px and rows run off the right edge; below 960 px the caption moves under the heading. Offline it draws a plausible example.
 - **Motion.** Critically damped springs (`--spring`, `--spring-slow`). One choreographed load scene; everything else answers input. Page transitions cross-fade with `@view-transition`. Reduced motion turns it all off.
@@ -149,14 +149,16 @@ Measured on devnet, instructions cost between about 400 compute units (`transfer
 
 - **Package.** `@gl36/sdk`, MIT, ESM with types, `@solana/kit` ^8.5 as the only (peer) dependency, `sideEffects: false`. Node 20.19+ and browsers.
 - **Contents.** `PROGRAM_ID` per cluster and layout constants with field offsets; `findCollection`; the seven instruction builders, which throw a `RangeError` for arguments the program would refuse; `decodeCollection`, `decodeHeader`, `decodeSlot`, `isCollectionAccount`, `collectionState`, `listedSlots`, `slotsOwnedBy`; RPC reads `fetchCollection`, `fetchHeader` and `fetchSlot` (via `dataSlice`), `findCollections` (`getProgramAccounts` with `memcmp` on tag, version and creator) and `getLamportsPerByte`; `parseLogs`, which only accepts lines from the GL-36 program's own invoke frames; `parseProgramError`, which reads kit errors, their causes, simulation logs or messages and does not mistake a System Program error for a GL-36 one; exact SOL ↔ price-unit conversions; `provenanceOf` and `tokenSeed` on WebCrypto.
-- **Source and build.** Sources import each other with `.ts` extensions; `tsc` with `rewriteRelativeImportExtensions` emits `dist/` (JS, `.d.ts` and maps). The `exports` map has a `source` condition pointing at `src/index.ts`, so `devnet/` scripts run from source with `node --conditions=source`, while `web/` and `docs/` alias the source directly and dedupe kit.
+- **Source and build.** Sources import each other with `.ts` extensions; `tsc` with `rewriteRelativeImportExtensions` emits `dist/` (JS, `.d.ts` and maps). The `exports` map has a `source` condition pointing at `src/index.ts`, so deploy scripts run from source with `node --conditions=source`, while the sites alias the source directly in Vite and TypeScript and dedupe kit.
 - **Tests.** `npm test` at the root: unit tests (byte layouts, builders and validation, decoding, logs, errors, prices, PDA, seeds checked against the GENLOSS generator) and the LiteSVM suite against `program/target/deploy/gl36.so`, skipped when the program isn't built. `prepack` runs typecheck, tests and build; the tarball is about 21 kB.
-- **Workspace.** The root `package.json` declares npm workspaces for `packages/sdk` and `devnet/`; `web/` and `docs/` keep their own `node_modules`.
+- **Workspace.** The root `package.json` is one npm workspace for `packages/*`, `deployments`, `tools/*`, `docs` and `collections/*`, with one lockfile and one copy of kit and Astro.
 - **Release.** 0.x tracks devnet. Publishing needs the `gl36` npm organisation; `publishConfig` asks for public access and provenance.
 
-## 8. Devnet data
+## 8. Projects and deployments
 
-`devnet/scripts/seed-demo.ts` (`npm run seed -w devnet`) creates Showcase (64 pieces, revealed, some listed) and Genesis (5,000 supply, 0.01 SOL mint, unrevealed), tops up the test wallets, and writes `web/src/data/devnet.json`. Collection nonces are derived from the generator's hash, so after a generator change a new run creates collections whose `generator_hash` matches.
+- **Layout.** Shared: `program/`, `packages/sdk/` (`@gl36/sdk`), `docs/`, `deployments/` (`@gl36/deployments`), `tools/devnet/` (`@gl36/devnet`: keys, RPC, send-and-confirm helpers and `devnet-e2e.ts`). Per mint: `collections/<name>/`, one workspace package named after the project, holding its generator, its site (`site/`, run with `astro --root site`), its deploy script and tests.
+- **Registry.** `deployments/devnet.json` has `cluster`, `rpc`, `programId`, `projects` (title, site and generator hash per project) and `collections` (id, project, title, address, supply, mint price, `testnetOnly`). A project's deploy script rewrites only its own entries and keeps the rest.
+- **GENLOSS deploy.** `collections/genloss/scripts/seed.ts` (`npm run seed -w genloss`) creates Showcase (64 pieces, revealed, some listed) and Genesis (5,000 supply, 0.01 SOL mint, unrevealed), tops up the test wallets, and records both in the registry. Collection nonces are derived from the generator's hash, so after a generator change a new run creates collections whose `generator_hash` matches.
 
 ## Sources
 

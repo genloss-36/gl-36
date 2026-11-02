@@ -6,14 +6,12 @@ on:
     tags: ["sdk-v*"]
     paths:
       - "packages/sdk/**"
-      - "generator/genloss-gen.js"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/sdk.yml"
   pull_request:
     paths:
       - "packages/sdk/**"
-      - "generator/genloss-gen.js"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/sdk.yml"
