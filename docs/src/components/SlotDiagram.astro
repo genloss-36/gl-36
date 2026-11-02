@@ -3,44 +3,67 @@ interface Props {
   account?: boolean;
 }
 const { account = true } = Astro.props;
-const owner = Array.from({ length: 32 });
-const price = Array.from({ length: 4 });
-const slots = Array.from({ length: 7 });
+
+let seed = 0x2436;
+const rnd = () => {
+  seed ^= seed << 13;
+  seed ^= seed >>> 17;
+  seed ^= seed << 5;
+  return (seed >>> 0) & 0xff;
+};
+const bytes = (n: number) => Array.from({ length: n }, rnd);
+const size = (v: number) => (0.16 + 0.7 * Math.sqrt(v / 255)).toFixed(3);
+
+const owner = bytes(32);
+const price = [0x90, 0xd0, 0x03, 0x00];
+
+const header = [1, 1, 253, 0, 0x88, 0x13, 3, 0, 200, 0, 0, 0, ...bytes(4), 0x80, 0x96, 0x98, 0, 0, 0, 0, 0];
+header.push(...bytes(64), ...new Array(96).fill(0), ...bytes(32), ...new Array(8).fill(0));
+const others = [bytes(32), bytes(32)];
+const rows: { bytes: number[]; label?: string; short?: string; lit?: boolean; free?: boolean }[] = [];
+for (let r = 0; r < 7; r++) rows.push({ bytes: header.slice(r * 36, r * 36 + 36), label: r === 0 ? "header, 224 bytes" : undefined, short: r === 0 ? "header" : undefined });
+rows.push({ bytes: [...owner, ...price], label: "slot 0", lit: true });
+rows.push({ bytes: [...others[0], 0, 0, 0, 0], label: "slot 1" });
+rows.push({ bytes: [...others[1], 0x20, 0xa1, 0x07, 0], label: "slot 2" });
+rows.push({ bytes: new Array(36).fill(0), label: "the next mint adds a row", short: "next mint", free: true });
 ---
 
 <figure class="slot-fig" data-slot-fig>
   <div class="slot" aria-hidden="true">
-    <div class="part owner">
-      <div class="cells">{owner.map((_, i) => <span style={`--i:${i}`} />)}</div>
-      <div class="ticks mono"><span>0</span><span>31</span></div>
-    </div>
-    <div class="part price">
-      <div class="cells">{price.map((_, i) => <span style={`--i:${i + 34}`} />)}</div>
-      <div class="ticks mono"><span>32</span><span>35</span></div>
-    </div>
+    {owner.map((v, i) => <span class="cell" style={`--s:${size(v)};--i:${i}`}><i /></span>)}
+    <span class="gap"></span>
+    {price.map((v, i) => <span class="cell price" style={`--s:${size(v)};--i:${i + 33}`}><i /></span>)}
+    <span class="tick t0">0</span>
+    <span class="tick t31">31</span>
+    <span class="tick t32">32</span>
+    <span class="tick t35">35</span>
   </div>
   <div class="legend">
-    <div>
-      <p class="k">owner</p>
-      <p class="v">32&nbsp;bytes: the owner’s public key.</p>
-    </div>
-    <div>
-      <p class="k">price</p>
-      <p class="v">4&nbsp;bytes: the ask as a u32 in units of 1,000&nbsp;lamports. Zero means not listed.</p>
-    </div>
+    <p><code>owner</code> 32 bytes, the holder’s public key</p>
+    <p class="right"><code>price</code> 4 bytes, the ask in units of 1,000 lamports; 0 is not listed</p>
   </div>
 
   {
     account && (
-      <div class="acct">
-        <div class="strip" aria-hidden="true">
-          <span class="hdr" style="--j:0">header</span>
-          {slots.map((_, i) => (
-            <span class="s" style={`--j:${i + 1}`}>
-              {i}
-            </span>
+      <div class="acct" aria-hidden="true">
+        <div class="field">
+          {rows.map((row) => (
+            <div class:list={["row", { lit: row.lit, free: row.free }]}>
+              <span class="dots">
+                {row.bytes.map((v) => (
+                  <span class="cell" style={`--s:${row.free ? "0.12" : size(v)}`}>
+                    <i />
+                  </span>
+                ))}
+              </span>
+              {row.label && (
+                <span class="lab">
+                  <span class="long">{row.label}</span>
+                  <span class="short">{row.short ?? row.label}</span>
+                </span>
+              )}
+            </div>
           ))}
-          <span class="more" style="--j:8">…</span>
         </div>
         <p class="formula mono">account length = 224 + minted × 36</p>
       </div>
@@ -48,7 +71,7 @@ const slots = Array.from({ length: 7 });
   }
   <figcaption class="sr-only">
     A slot is 36 bytes: bytes 0 to 31 hold the owner, bytes 32 to 35 the listing price. The collection account is a
-    224-byte header followed by one slot per minted token.
+    224-byte header followed by one 36-byte row per minted token.
   </figcaption>
 </figure>
 
@@ -61,7 +84,7 @@ const slots = Array.from({ length: 7 });
           e.target.setAttribute("data-in", "");
           io.unobserve(e.target);
         }),
-      { threshold: 0.45 },
+      { threshold: 0.4 },
     );
     document.querySelectorAll<HTMLElement>("[data-slot-fig]").forEach((f) => {
       if (f.getBoundingClientRect().top < innerHeight * 0.6) return;
@@ -72,123 +95,167 @@ const slots = Array.from({ length: 7 });
 </script>
 
 <style>
-  .slot-fig[data-motion] .cells span,
-  .slot-fig[data-motion] .strip span {
-    opacity: 0;
-  }
-  .slot-fig[data-motion] .cells span {
-    transform: scale(0.3);
-  }
-  .slot-fig[data-motion] .strip span {
-    transform: translateX(-12px);
-  }
-  .slot-fig[data-in] .cells span,
-  .slot-fig[data-in] .strip span {
-    opacity: 1;
-    transform: none;
-  }
-  .slot-fig[data-in] .cells span {
-    transition:
-      opacity 0.2s var(--ease) calc(var(--i) * 14ms),
-      transform var(--spring-dur) var(--spring) calc(var(--i) * 14ms);
-  }
-  .slot-fig[data-in] .strip span {
-    transition:
-      opacity 0.3s var(--ease) calc(620ms + var(--j) * 45ms),
-      transform var(--spring-dur) var(--spring) calc(620ms + var(--j) * 45ms);
-  }
-
   .slot-fig {
     margin: 0;
   }
   .slot {
     display: grid;
-    grid-template-columns: 32fr 4fr;
-    gap: clamp(4px, 0.8vw, 10px);
+    grid-template-columns: repeat(32, minmax(0, 1fr)) 0.6fr repeat(4, minmax(0, 1fr));
+    align-items: center;
+    row-gap: 10px;
+    max-width: 1240px;
   }
-  .cells {
+  .cell {
     display: grid;
-    gap: clamp(2px, 0.35vw, 5px);
-  }
-  .owner .cells {
-    grid-template-columns: repeat(32, 1fr);
-  }
-  .price .cells {
-    grid-template-columns: repeat(4, 1fr);
-  }
-  .cells span {
+    place-items: center;
     aspect-ratio: 1;
-    border-radius: 22%;
+  }
+  .cell i {
+    width: calc(var(--s) * 100%);
+    height: calc(var(--s) * 100%);
+    border-radius: 30%;
     background: var(--fg);
   }
-  .price .cells span {
-    background: transparent;
-    box-shadow: inset 0 0 0 1.5px var(--fg);
+  .slot .cell.price i {
+    background: var(--fg-2);
   }
-  .ticks {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
+  .tick {
+    grid-row: 2;
+    font-family: var(--font-mono);
     font-size: 12px;
     color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .t0 {
+    grid-column: 1 / 5;
+    padding-left: 2px;
+  }
+  .t31 {
+    grid-column: 29 / 33;
+    justify-self: end;
+  }
+  .t32 {
+    grid-column: 34 / 36;
+    padding-left: 2px;
+  }
+  .t35 {
+    grid-column: 36 / 38;
+    justify-self: end;
   }
   .legend {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px 48px;
+    flex-wrap: wrap;
+    max-width: 1240px;
+    margin-top: 20px;
   }
-  .k {
+  .legend p {
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .v {
-    margin: 4px 0 0;
+    max-width: 30em;
     font-size: 15px;
     color: var(--fg-2);
   }
-  .acct {
-    margin-top: 48px;
+  .legend .right {
+    text-align: right;
   }
-  .strip {
-    display: grid;
-    grid-template-columns: 224fr repeat(7, 36fr) 30fr;
-    gap: 3px;
-    height: 44px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0;
-  }
-  .strip span {
-    display: grid;
-    place-items: center;
-    border-radius: 6px;
-    background: var(--bg-elev-2);
-    color: var(--fg-2);
-  }
-  .strip .hdr {
-    background: var(--fg);
-    color: var(--bg);
+  .legend code {
+    margin-right: 8px;
+    font-size: 14px;
     font-weight: 600;
+    color: var(--fg);
+    background: none;
+    padding: 0;
   }
-  .strip .s {
-    box-shadow: inset 0 0 0 1px var(--line-strong);
-    background: transparent;
+
+  .acct {
+    margin-top: clamp(48px, 6vw, 72px);
   }
-  .strip .more {
-    background: transparent;
+  .field {
+    display: grid;
+    gap: 3px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(36, 11px);
+    gap: 3px;
+    flex: none;
+  }
+  .dots i {
+    background: var(--field-ink);
+  }
+  .row.lit .dots i {
+    background: var(--fg);
+  }
+  .row.free .dots i {
+    opacity: 0.5;
+  }
+  .lab {
+    font-size: 13px;
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+  .row.lit .lab {
+    color: var(--fg);
+  }
+  .lab .short {
+    display: none;
   }
   .formula {
-    margin: 14px 0 0;
+    margin: 18px 0 0;
     font-size: 13px;
     color: var(--fg-3);
   }
-  @media (max-width: 560px) {
-    .legend {
-      grid-template-columns: 1fr;
-      gap: 16px;
+
+  .slot-fig[data-motion] .slot .cell i {
+    transform: scale(0);
+  }
+  .slot-fig[data-motion] .row {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .slot-fig[data-in] .slot .cell i {
+    transform: none;
+    transition: transform var(--spring-dur) var(--spring) calc(var(--i) * 14ms);
+  }
+  .slot-fig[data-in] .row {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.3s var(--ease) 560ms,
+      transform var(--spring-dur) var(--spring) 560ms;
+  }
+
+  @media (max-width: 720px) {
+    .slot {
+      grid-template-columns: repeat(32, minmax(0, 1fr)) 1.2fr repeat(4, minmax(0, 1fr));
+    }
+    .tick {
+      font-size: 10px;
+    }
+    .legend .right {
+      text-align: left;
+    }
+    .dots {
+      grid-template-columns: repeat(36, 5px);
+      gap: 2px;
+    }
+    .row {
+      gap: 10px;
+    }
+    .lab {
+      font-size: 12px;
+    }
+    .lab .long {
+      display: none;
+    }
+    .lab .short {
+      display: inline;
     }
   }
 </style>

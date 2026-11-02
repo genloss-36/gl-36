@@ -14,37 +14,35 @@ const { supply = 10_000 } = Astro.props;
       <output class="n" data-n>{supply.toLocaleString("en-US")}</output>
       <input type="range" min="0" max="1000" step="1" data-range aria-label="Collection size" />
     </label>
-    <div class="seg" role="group" aria-label="Rent rate">
-      <span class="thumb" aria-hidden="true"></span>
+    <div class="rate" role="group" aria-label="Rent rate">
+      <span class="label">Rent rate</span>
       <button class="press" type="button" aria-pressed="true" data-rate={RENT.now}>
-        Today<span>{RENT.now.toLocaleString("en-US")}&nbsp;lamports per byte</span>
+        <i aria-hidden="true"></i>Today<span>{RENT.now.toLocaleString("en-US")}&nbsp;lamports per byte</span>
       </button>
       <button class="press" type="button" aria-pressed="false" data-rate={RENT.afterCuts}>
-        After SIMD-0437<span>{RENT.afterCuts}&nbsp;lamports per byte</span>
+        <i aria-hidden="true"></i>After SIMD-0437<span>{RENT.afterCuts}&nbsp;lamports per byte</span>
       </button>
     </div>
   </div>
 
-  <div class="rows">
-    <div class="row gl">
-      <div class="who">
-        <span class="name">GL-36</span>
-        <span class="bytes" data-gl-bytes></span>
-      </div>
-      <div class="track"><span class="fill" data-gl-bar></span></div>
-      <div class="cost"><span data-gl-sol></span>&nbsp;SOL</div>
+  <div class="sides">
+    <div class="side gl">
+      <span class="label">GL-36</span>
+      <p class="cost"><span data-gl-sol></span>&nbsp;SOL</p>
+      <p class="bytes" data-gl-bytes></p>
+      <div class="dots" data-gl-dots aria-hidden="true"></div>
     </div>
-    <div class="row classic">
-      <div class="who">
-        <span class="name">Classic NFT</span>
-        <span class="bytes" data-cl-bytes></span>
-      </div>
-      <div class="track"><span class="fill" data-cl-bar></span></div>
-      <div class="cost"><span data-cl-sol></span>&nbsp;SOL</div>
+    <div class="side classic">
+      <span class="label">Classic NFT</span>
+      <p class="cost"><span data-cl-sol></span>&nbsp;SOL</p>
+      <p class="bytes" data-cl-bytes></p>
+      <div class="dots" data-cl-dots aria-hidden="true"></div>
     </div>
   </div>
 
-  <p class="saving" aria-live="polite"><span data-ratio></span>× less rent. <span class="muted">You keep <span data-saved></span>&nbsp;SOL.</span></p>
+  <p class="saving" aria-live="polite">
+    <span data-ratio></span>× less rent. <span class="muted">You keep <span data-saved></span>&nbsp;SOL.</span>
+  </p>
 </div>
 
 <script>
@@ -77,11 +75,15 @@ const { supply = 10_000 } = Astro.props;
     let shown = { gl: 0, cl: 0 };
     let raf = 0;
 
+    const dots = (el: HTMLElement, count: number) => {
+      if (el.childElementCount === count) return;
+      el.replaceChildren(...Array.from({ length: count }, () => document.createElement("i")));
+    };
+
     const paint = (gl: number, cl: number) => {
       shown = { gl, cl };
       $("[data-gl-sol]").textContent = fmt(gl);
       $("[data-cl-sol]").textContent = fmt(cl);
-      $<HTMLElement>("[data-gl-bar]").style.transform = `scaleX(${Math.max(gl / cl, 0.004)})`;
       $("[data-ratio]").textContent = (cl / gl).toFixed(1);
       $("[data-saved]").textContent = fmt(cl - gl);
     };
@@ -93,8 +95,10 @@ const { supply = 10_000 } = Astro.props;
       const cl = clBytes * rate;
       $("[data-n]").textContent = n.toLocaleString("en-US");
       range.setAttribute("aria-valuetext", `${n.toLocaleString("en-US")} tokens`);
-      $("[data-gl-bytes]").textContent = `${glBytes.toLocaleString("en-US")} bytes, 1 account`;
-      $("[data-cl-bytes]").textContent = `${clBytes.toLocaleString("en-US")} bytes, ${(n * 4).toLocaleString("en-US")} accounts`;
+      $("[data-gl-bytes]").textContent = `${glBytes.toLocaleString("en-US")} bytes in 1 account`;
+      $("[data-cl-bytes]").textContent = `${clBytes.toLocaleString("en-US")} bytes in ${(n * 4).toLocaleString("en-US")} accounts`;
+      dots($<HTMLElement>("[data-gl-dots]"), 1);
+      dots($<HTMLElement>("[data-cl-dots]"), Math.round(cl / gl));
       cancelAnimationFrame(raf);
       if (!animate || still || !shown.cl) return paint(gl, cl);
       const from = shown;
@@ -109,20 +113,6 @@ const { supply = 10_000 } = Astro.props;
       raf = requestAnimationFrame(step);
     };
 
-    const seg = $<HTMLElement>(".seg");
-    const thumb = $<HTMLElement>(".thumb");
-    const place = (jump = false) => {
-      const on = $<HTMLButtonElement>("[aria-pressed=true]");
-      if (jump) thumb.style.transition = "none";
-      thumb.style.width = `${on.offsetWidth}px`;
-      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
-      if (jump) {
-        void thumb.offsetWidth;
-        thumb.style.transition = "";
-      }
-    };
-    new ResizeObserver(() => place(true)).observe(seg);
-
     range.addEventListener("input", () => {
       n = toSupply(Number(range.value));
       render();
@@ -131,7 +121,6 @@ const { supply = 10_000 } = Astro.props;
       b.addEventListener("click", () => {
         rate = Number(b.dataset.rate);
         root.querySelectorAll("[data-rate]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-        place();
         render(true);
       }),
     );
@@ -141,15 +130,14 @@ const { supply = 10_000 } = Astro.props;
 
 <style>
   .calc {
-    border-radius: var(--radius-lg);
-    background: var(--bg-elev);
-    padding: clamp(24px, 4vw, 48px);
+    display: grid;
+    gap: clamp(40px, 5vw, 64px);
   }
   .controls {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 32px;
+    gap: 32px 64px;
     flex-wrap: wrap;
   }
   .supply {
@@ -189,125 +177,110 @@ const { supply = 10_000 } = Astro.props;
     width: 22px;
     height: 22px;
     margin-top: -10px;
-    border-radius: 50%;
+    border-radius: 30%;
     background: var(--fg);
-    box-shadow: 0 1px 6px rgb(0 0 0 / 0.3);
   }
   input[type="range"]::-moz-range-thumb {
     width: 22px;
     height: 22px;
     border: 0;
-    border-radius: 50%;
+    border-radius: 30%;
     background: var(--fg);
   }
 
-  .seg {
-    position: relative;
+  .rate {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+  }
+  .rate .label {
+    margin-bottom: 4px;
+  }
+  .rate button {
     display: inline-flex;
-    padding: 3px;
-    border-radius: 12px;
-    background: var(--bg-elev-2);
-  }
-  .thumb {
-    position: absolute;
-    top: 3px;
-    bottom: 3px;
-    left: 0;
-    border-radius: 9px;
-    background: var(--bg);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
-    transition:
-      transform var(--spring-dur) var(--spring),
-      width var(--spring-dur) var(--spring);
-  }
-  .seg button {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: 2px;
-    padding: 8px 14px;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 0;
     border: 0;
-    border-radius: 9px;
-    background: transparent;
-    color: var(--fg-2);
-    font-size: 14px;
+    background: none;
+    color: var(--fg-3);
+    font-size: 15px;
     font-weight: 600;
-    text-align: left;
     cursor: pointer;
-    transition:
-      background-color 0.2s var(--ease),
-      color 0.2s var(--ease),
-      transform 0.1s ease-out;
+    transition: color 0.2s var(--ease);
   }
-  .seg button:hover {
-    color: var(--fg);
+  .rate button i {
+    align-self: center;
+    width: 8px;
+    height: 8px;
+    border-radius: 30%;
+    background: var(--field-ink);
+    transition: background-color 0.2s var(--ease);
   }
-  .seg button:active {
-    transform: scale(0.97);
-  }
-  .seg button span {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--fg-2);
-  }
-  .seg button[aria-pressed="true"] {
-    color: var(--fg);
-  }
-
-  .rows {
-    display: grid;
-    gap: 28px;
-    margin-top: 44px;
-  }
-  .row {
-    display: grid;
-    grid-template-columns: 220px 1fr auto;
-    align-items: center;
-    gap: 24px;
-  }
-  .who {
-    display: grid;
-    gap: 2px;
-  }
-  .name {
-    font-size: 17px;
-    font-weight: 700;
-  }
-  .bytes {
+  .rate button span {
     font-size: 13px;
+    font-weight: 400;
     color: var(--fg-3);
     font-variant-numeric: tabular-nums;
   }
-  .track {
-    height: 10px;
-    border-radius: 999px;
-    background: var(--bg-elev-2);
-    overflow: hidden;
+  .rate button:hover,
+  .rate button[aria-pressed="true"] {
+    color: var(--fg);
   }
-  .fill {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
+  .rate button[aria-pressed="true"] i {
     background: var(--fg);
-    transform-origin: left;
   }
-  .classic .fill {
-    background: var(--fg-3);
+  .rate button[aria-pressed="true"] span {
+    color: var(--fg-2);
+  }
+
+  .sides {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px clamp(32px, 6vw, 96px);
+  }
+  .side {
+    display: grid;
+    align-content: start;
+    gap: 8px;
   }
   .cost {
-    min-width: 9ch;
-    text-align: right;
-    font-size: 21px;
+    margin: 4px 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 64px);
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .classic .cost {
     color: var(--fg-2);
   }
+  .bytes {
+    margin: 0;
+    font-size: 13px;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 12px);
+    gap: 4px;
+    max-width: calc(24 * 12px + 23 * 4px);
+    margin-top: 16px;
+  }
+  .dots :global(i) {
+    width: 12px;
+    height: 12px;
+    border-radius: 30%;
+    background: var(--field-ink);
+  }
+  .gl .dots :global(i) {
+    background: var(--fg);
+  }
   .saving {
-    margin: 40px 0 0;
+    margin: 0;
     font-size: 21px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -318,19 +291,16 @@ const { supply = 10_000 } = Astro.props;
   }
 
   @media (max-width: 720px) {
-    .row {
-      grid-template-columns: 1fr auto;
-      gap: 10px 16px;
+    .sides {
+      grid-template-columns: 1fr;
     }
-    .track {
-      grid-column: 1 / -1;
-      grid-row: 2;
+    .dots {
+      grid-template-columns: repeat(auto-fill, 10px);
+      max-width: none;
     }
-    .seg {
-      width: 100%;
-    }
-    .seg button {
-      flex: 1;
+    .dots :global(i) {
+      width: 10px;
+      height: 10px;
     }
   }
 </style>
