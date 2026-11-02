@@ -4,7 +4,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "allowImportingTsExtensions": true,
-    "paths": { "@gl36/sdk": ["../../../packages/sdk/src/index.ts"] }
+    "paths": { "@gl-36/sdk": ["../../../packages/sdk/src/index.ts"] }
   },
   "include": [".astro/types.d.ts", "src/**/*"],
   "exclude": ["dist"]

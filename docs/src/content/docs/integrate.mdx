@@ -23,7 +23,7 @@ An account is a GL-36 collection when all of these hold:
 Keep a list of collections you support, read them, and filter slots by owner:
 
 ```ts
-import { decodeCollection, slotsOwnedBy } from "@gl36/sdk";
+import { decodeCollection, slotsOwnedBy } from "@gl-36/sdk";
 
 async function owned(collections: Address[], wallet: Address) {
   const { value } = await rpc
@@ -77,7 +77,7 @@ Before reveal (`flags & 1 === 0`), show a placeholder: content does not exist ye
 Program errors arrive as `custom program error: 0x…` inside a kit `SolanaError` or the simulation logs. `parseProgramError` finds the code wherever it is and names it. Pass `programId` so an error raised by another program, such as the System Program's insufficient funds, isn't mistaken for one of GL-36's.
 
 ```ts
-import { PROGRAM_ID, parseProgramError } from "@gl36/sdk";
+import { PROGRAM_ID, parseProgramError } from "@gl-36/sdk";
 
 const err = parseProgramError(e, { programId: PROGRAM_ID.mainnet });
 if (err?.name === "SellerMismatch") showMessage("This token was just sold or moved. Refresh and try again.");

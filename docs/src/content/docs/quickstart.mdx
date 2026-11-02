@@ -9,7 +9,7 @@ import Note from "../../components/Note.astro";
 The GL-36 SDK is a small TypeScript package on top of [`@solana/kit`](https://github.com/anza-xyz/kit) 8.5. It runs on Node 20.19+ and in the browser. Everything below targets Solana mainnet.
 
 ```bash
-npm install @gl36/sdk @solana/kit
+npm install @gl-36/sdk @solana/kit
 ```
 
 `@solana/kit` is a peer dependency, so your app and the SDK share one copy of it.
@@ -20,7 +20,7 @@ A collection is one account. Fetch it and you have every token, owner and listin
 
 ```ts
 import { address, createSolanaRpc } from "@solana/kit";
-import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl36/sdk";
+import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl-36/sdk";
 
 const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
 const COLLECTION = address("<collection address>");
@@ -78,7 +78,7 @@ async function send(payer: KeyPairSigner, ixs: Instruction[]) {
 `mint` takes a count from 1 to 10. The minter pays the mint price to the creator and the rent for the 36 bytes each new token adds.
 
 ```ts
-import { mintIx } from "@gl36/sdk";
+import { mintIx } from "@gl-36/sdk";
 
 await send(me, [mintIx(PROGRAM_ID.mainnet, me, COLLECTION, col.creator, 3)]);
 ```
@@ -90,7 +90,7 @@ The new tokens are the last three slots of the account, ids `minted` to `minted 
 Prices are `u32` in units of 1,000 lamports. `solToPrice` and `priceToSol` convert exactly, without floating-point rounding.
 
 ```ts
-import { buyIx, listIx, solToPrice } from "@gl36/sdk";
+import { buyIx, listIx, solToPrice } from "@gl-36/sdk";
 
 await send(owner, [listIx(PROGRAM_ID.mainnet, owner, COLLECTION, 7, solToPrice("0.25"))]);
 
@@ -101,7 +101,7 @@ await send(buyer, [buyIx(PROGRAM_ID.mainnet, buyer, COLLECTION, slot.owner, col.
 The buyer passes the seller and the price they saw. If the seller relists higher or the token changes hands first, the purchase fails instead of paying more. `parseProgramError` turns that failure into a name you can act on:
 
 ```ts
-import { parseProgramError } from "@gl36/sdk";
+import { parseProgramError } from "@gl-36/sdk";
 
 try {
   await send(buyer, [buyIx(PROGRAM_ID.mainnet, buyer, COLLECTION, slot.owner, col.treasury, 7, slot.price)]);

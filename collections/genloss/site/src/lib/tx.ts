@@ -15,7 +15,7 @@ import {
   type Signature,
   type TransactionSigner,
 } from "@solana/kit";
-import { ERR } from "@gl36/sdk";
+import { ERR } from "@gl-36/sdk";
 import { t, type Key, type Lang } from "../i18n/strings";
 import { refresh, rpc } from "./chain";
 import { explorerTx } from "./config";

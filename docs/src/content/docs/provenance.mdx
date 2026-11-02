@@ -39,7 +39,7 @@ seed(id) = sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id as u16 lit
 4. **reveal** — the creator publishes the secret. The program checks `sha256(secret) == provenance`, stores it and sets `REVEALED`. If the mint was still open, it also writes the entropy and lowers `max_supply` to `minted`.
 
 ```ts
-import { revealIx } from "@gl36/sdk";
+import { revealIx } from "@gl-36/sdk";
 
 await send(creator, [revealIx(PROGRAM, creator, COLLECTION, secret)]);
 ```

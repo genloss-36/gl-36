@@ -32,7 +32,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm pack --dry-run -w @gl36/sdk
+      - run: npm pack --dry-run -w @gl-36/sdk
 
   publish:
     if: startsWith(github.ref, 'refs/tags/sdk-v')
@@ -51,6 +51,6 @@ jobs:
       - run: npm ci
       - name: Tag matches package version
         run: test "sdk-v$(node -p "require('./packages/sdk/package.json').version")" = "${GITHUB_REF_NAME}"
-      - run: npm publish -w @gl36/sdk --provenance --access public
+      - run: npm publish -w @gl-36/sdk --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

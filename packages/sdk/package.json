@@ -1,5 +1,5 @@
 {
-  "name": "@gl36/sdk",
+  "name": "@gl-36/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for GL-36, an NFT standard for Solana where a token takes 36 bytes.",
   "license": "MIT",

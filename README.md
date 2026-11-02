@@ -3,7 +3,7 @@
 GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the owner and 4 for a listing price. A whole collection lives in one program-owned account, so there are no mint, token or metadata accounts per NFT, no indexer, and trading is built into the program.
 
 - Docs: [gl36.org](https://gl36.org)
-- SDK: [`@gl36/sdk`](packages/sdk) on npm
+- SDK: [`@gl-36/sdk`](packages/sdk) on npm
 - Agent skill: [`skills/gl36`](skills/gl36) for Claude Code, Codex, Cursor and other coding agents
 - First collection: [GENLOSS](collections/genloss), minted at [genloss.gl36.org](https://genloss.gl36.org)
 
@@ -16,10 +16,10 @@ The standard and everything shared sits at the top level. Each mint built on it 
 | Path | What it is |
 |---|---|
 | [`program/`](program) | The on-chain program, Rust with [Pinocchio](https://github.com/anza-xyz/pinocchio) 0.12, built to `gl36.so` (sBPF v3) |
-| [`packages/sdk/`](packages/sdk) | `@gl36/sdk`: instruction builders, account decoding, RPC reads, logs and errors on [@solana/kit](https://github.com/anza-xyz/kit), with unit and LiteSVM tests |
+| [`packages/sdk/`](packages/sdk) | `@gl-36/sdk`: instruction builders, account decoding, RPC reads, logs and errors on [@solana/kit](https://github.com/anza-xyz/kit), with unit and LiteSVM tests |
 | [`docs/`](docs) | The docs site at gl36.org: Astro + MDX, with an account inspector |
-| [`deployments/`](deployments) | `@gl36/deployments`: where the program and every collection are deployed, per cluster |
-| [`tools/cluster/`](tools/cluster) | `@gl36/cluster`: keys, RPC and send-and-confirm helpers for deploy scripts |
+| [`deployments/`](deployments) | `@gl-36/deployments`: where the program and every collection are deployed, per cluster |
+| [`tools/cluster/`](tools/cluster) | `@gl-36/cluster`: keys, RPC and send-and-confirm helpers for deploy scripts |
 | [`skills/gl36/`](skills/gl36) | An agent skill that teaches coding agents to integrate GL-36 with the SDK |
 | [`collections/genloss/`](collections/genloss) | GENLOSS: its art generator, mint site and deploy script |
 | [`DESIGN.md`](DESIGN.md) | Account layout, instructions, costs, and how the SDK, the docs and GENLOSS are built |
@@ -80,7 +80,7 @@ The [Quickstart](https://gl36.org/docs/quickstart/) and the landing page also of
 ## Adding a collection
 
 1. Create `collections/<name>/` with a `package.json` named `<name>`: its generator, its site if it has one, a deploy script and tests. [GENLOSS](collections/genloss) is the reference.
-2. The deploy script uses `@gl36/sdk` and `@gl36/cluster`, and writes its collections to `deployments/mainnet.json` under `projects.<name>` and `collections[].project = "<name>"`, leaving other projects' entries alone.
+2. The deploy script uses `@gl-36/sdk` and `@gl-36/cluster`, and writes its collections to `deployments/mainnet.json` under `projects.<name>` and `collections[].project = "<name>"`, leaving other projects' entries alone.
 3. The docs pick the new collections up from the registry; nothing in the shared code changes.
 
 ## License

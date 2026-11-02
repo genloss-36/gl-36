@@ -9,7 +9,7 @@ Mint site: [genloss.gl36.org](https://genloss.gl36.org)
 | [`generator/`](generator) | `genloss-gen.js`, the deterministic art generator, with test vectors, `check.mjs` and a preview page |
 | [`site/`](site) | The mint site: Astro + React islands, English and Chinese |
 | [`scripts/launch.ts`](scripts/launch.ts) | Creates the Genesis collection and records it in `deployments/mainnet.json` |
-| [`test/`](test) | Checks that the generator's seeds match `@gl36/sdk` and that the registry pins this generator's hash |
+| [`test/`](test) | Checks that the generator's seeds match `@gl-36/sdk` and that the registry pins this generator's hash |
 
 The seed of piece `id` is `sha256("genloss/v1" ‖ collection ‖ secret ‖ entropy ‖ id_u16_le)`, the SDK's `tokenSeed` with the `genloss/v1` domain.
 

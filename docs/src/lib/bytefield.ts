@@ -1,4 +1,4 @@
-import { decodeCollection, type Collection } from "@gl36/sdk";
+import { decodeCollection, type Collection } from "@gl-36/sdk";
 import { HEADER_LEN, SLOT_LEN, headerField, type Field } from "./layout";
 
 const COLS = SLOT_LEN;

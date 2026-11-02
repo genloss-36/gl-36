@@ -1,4 +1,4 @@
-# @gl36/sdk
+# @gl-36/sdk
 
 TypeScript SDK for [GL-36](https://gl36.org), an NFT standard for Solana where a token takes 36 bytes: 32 for the owner and 4 for a listing price. A whole collection lives in one program-owned account, so one RPC call reads every token, owner and listing, and trading is built into the program.
 
@@ -7,14 +7,14 @@ Built on [`@solana/kit`](https://github.com/anza-xyz/kit). ESM with types, no ot
 > The program has not been audited.
 
 ```bash
-npm install @gl36/sdk @solana/kit
+npm install @gl-36/sdk @solana/kit
 ```
 
 ## Read a collection
 
 ```ts
 import { address, createSolanaRpc } from "@solana/kit";
-import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl36/sdk";
+import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol } from "@gl-36/sdk";
 
 const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
 const collection = address("<collection address>");
@@ -32,7 +32,7 @@ for (const slot of listedSlots(col)) console.log(slot.id, slot.owner, priceToSol
 Builders return plain kit `Instruction`s for any transaction pipeline and any Wallet Standard signer.
 
 ```ts
-import { buyIx, listIx, mintIx, parseProgramError, solToPrice } from "@gl36/sdk";
+import { buyIx, listIx, mintIx, parseProgramError, solToPrice } from "@gl-36/sdk";
 
 const program = PROGRAM_ID.mainnet;
 await send(me, [mintIx(program, me, collection, col.creator, 3)]);

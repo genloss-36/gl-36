@@ -51,7 +51,7 @@ SIMD-0437 lowers the rent rate in steps. Steps 1 and 2 are live on mainnet since
 Because rent is read at run time, nothing in a collection has to change when the rate drops. The account simply holds more than it needs. The creator calls `withdraw_excess` to move the difference out:
 
 ```ts
-import { withdrawExcessIx } from "@gl36/sdk";
+import { withdrawExcessIx } from "@gl-36/sdk";
 
 await send(creator, [withdrawExcessIx(PROGRAM, creator, COLLECTION)]);
 ```

@@ -1,6 +1,6 @@
 ---
 name: gl36
-description: Build on GL-36, the Solana NFT standard where a whole collection is one program-owned account and each token is a 36-byte slot (32-byte owner, 4-byte price), with the @gl36/sdk TypeScript package on @solana/kit. Use this skill whenever the user mentions GL-36, gl36, @gl36/sdk, gl36.org, GENLOSS, or the program GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb, or wants to read a GL-36 collection, show its tokens in a wallet, marketplace or bot, mint, list, delist, buy or transfer GL-36 tokens, track sales from logs, launch or reveal a GL-36 collection, decode its account bytes, or explain a "custom program error" from it, even if they only paste a collection address or an error.
+description: Build on GL-36, the Solana NFT standard where a whole collection is one program-owned account and each token is a 36-byte slot (32-byte owner, 4-byte price), with the @gl-36/sdk TypeScript package on @solana/kit. Use this skill whenever the user mentions GL-36, gl36, @gl-36/sdk, gl36.org, GENLOSS, or the program GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb, or wants to read a GL-36 collection, show its tokens in a wallet, marketplace or bot, mint, list, delist, buy or transfer GL-36 tokens, track sales from logs, launch or reveal a GL-36 collection, decode its account bytes, or explain a "custom program error" from it, even if they only paste a collection address or an error.
 metadata:
   author: gl36
   version: "0.1.0"
@@ -22,7 +22,7 @@ Status: program `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` (`PROGRAM_ID.main
 ## Setup
 
 ```bash
-npm install @gl36/sdk @solana/kit
+npm install @gl-36/sdk @solana/kit
 ```
 
 `@solana/kit` (8.5 or newer) is a peer dependency: the app and the SDK share one copy. The SDK is ESM with types, runs on Node 20.19+ and in browsers, and has no other dependencies. Prefer it over decoding bytes by hand; it validates the layout and the arguments the program would reject.
@@ -31,7 +31,7 @@ npm install @gl36/sdk @solana/kit
 
 ```ts
 import { address, createSolanaRpc } from "@solana/kit";
-import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol, slotsOwnedBy } from "@gl36/sdk";
+import { PROGRAM_ID, collectionState, fetchCollection, listedSlots, priceToSol, slotsOwnedBy } from "@gl-36/sdk";
 
 const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
 const fetched = await fetchCollection(rpc, address(collectionAddress), { programId: PROGRAM_ID.mainnet });
@@ -98,7 +98,7 @@ Several GL-36 instructions can share one transaction, including instructions on 
 ## Mint, list, buy, transfer
 
 ```ts
-import { PROGRAM_ID, buyIx, listIx, mintIx, solToPrice, transferIx } from "@gl36/sdk";
+import { PROGRAM_ID, buyIx, listIx, mintIx, solToPrice, transferIx } from "@gl-36/sdk";
 
 const program = PROGRAM_ID.mainnet;
 const collection = address(collectionAddress);
@@ -124,7 +124,7 @@ What these need to get right, and why:
 ## Errors
 
 ```ts
-import { PROGRAM_ID, parseProgramError } from "@gl36/sdk";
+import { PROGRAM_ID, parseProgramError } from "@gl-36/sdk";
 
 try {
   await send(buyer, [buyIx(program, buyer, collection, slot.owner, col.treasury, 7, slot.price)]);
@@ -156,7 +156,7 @@ All 17 codes are in [references/protocol.md](references/protocol.md#errors).
 Each instruction logs one line. `parseLogs` turns a transaction's `logMessages` into typed events and ignores lines from any other program in the same transaction, so a CPI can't fake a sale:
 
 ```ts
-import { PROGRAM_ID, parseLogs, priceToSol } from "@gl36/sdk";
+import { PROGRAM_ID, parseLogs, priceToSol } from "@gl-36/sdk";
 
 const sigs = await rpc.getSignaturesForAddress(collection, { limit: 50 }).send();
 for (const { signature, err } of sigs) {
@@ -175,7 +175,7 @@ Event types: `init`, `mint` (`firstId`, `count`), `transfer` (`id`), `list` (`id
 Before reveal (`collectionState(col) !== "revealed"`), content does not exist yet: show a placeholder, never a guess. After reveal, a token's seed is
 
 ```ts
-import { tokenSeed } from "@gl36/sdk";
+import { tokenSeed } from "@gl-36/sdk";
 
 const seed = await tokenSeed({ domain, collection, secret: col.secret, entropy: col.entropy, id });
 ```

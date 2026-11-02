@@ -1,4 +1,4 @@
-import { decodeCollection, type Collection } from "@gl36/sdk";
+import { decodeCollection, type Collection } from "@gl-36/sdk";
 import { RPC } from "./config";
 
 const RPC_KEY = "gl36.docs.rpc";

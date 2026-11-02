@@ -19,7 +19,7 @@ To be verifiable a generator must be deterministic on every machine: no `Math.ra
 
 ```ts
 import { randomBytes } from "node:crypto";
-import { provenanceOf } from "@gl36/sdk";
+import { provenanceOf } from "@gl-36/sdk";
 
 const secret = new Uint8Array(randomBytes(32));
 const provenance = await provenanceOf(secret);
@@ -40,7 +40,7 @@ Store `secret` offline, like a private key. It is needed once, for `reveal`, and
 ## 4. Initialize
 
 ```ts
-import { PROGRAM_ID, findCollection, initIx } from "@gl36/sdk";
+import { PROGRAM_ID, findCollection, initIx } from "@gl-36/sdk";
 
 const program = PROGRAM_ID.mainnet;
 const nonce = 1;
@@ -69,7 +69,7 @@ The mint opens as soon as `init` lands. Anyone can call `mint` with 1–10 token
 The mint closes by itself when the last token is minted. To end it early, call `reveal` while it is still open: that closes it at the current supply and reveals in the same step.
 
 ```ts
-import { revealIx } from "@gl36/sdk";
+import { revealIx } from "@gl-36/sdk";
 
 await send(creator, [revealIx(program, creator, collection, secret)]);
 ```
@@ -81,7 +81,7 @@ The entropy is the latest slot hash at the moment the mint closes, unknown to th
 Rent is read from the cluster at each operation. When Solana lowers it (SIMD-0437 steps from 5,080 down to 696 lamports per byte), the account holds more than it needs and the creator can take the difference out at any time:
 
 ```ts
-import { withdrawExcessIx } from "@gl36/sdk";
+import { withdrawExcessIx } from "@gl-36/sdk";
 
 await send(creator, [withdrawExcessIx(program, creator, collection)]);
 ```

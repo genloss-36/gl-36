@@ -1,4 +1,4 @@
-import { PRICE_UNIT, type Collection } from "@gl36/sdk";
+import { PRICE_UNIT, type Collection } from "@gl-36/sdk";
 import type { Hover } from "./bytefield";
 import { hex, int, isZero, short, sol } from "./format";
 

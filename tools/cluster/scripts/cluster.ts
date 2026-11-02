@@ -17,7 +17,7 @@ import {
   type Instruction,
   type KeyPairSigner,
 } from "@solana/kit";
-import { SYSTEM_PROGRAM, decodeCollection } from "@gl36/sdk";
+import { SYSTEM_PROGRAM, decodeCollection } from "@gl-36/sdk";
 
 export const PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
 export const RPC_URL = process.env.RPC_URL ?? PUBLIC_RPC;

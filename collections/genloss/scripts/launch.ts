@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { findCollection, initIx } from "@gl36/sdk";
-import { PUBLIC_RPC, RPC_URL, balance, call, collectionState, loadKey, root, rpc, send, sol, systemTransfer } from "@gl36/cluster";
+import { findCollection, initIx } from "@gl-36/sdk";
+import { PUBLIC_RPC, RPC_URL, balance, call, collectionState, loadKey, root, rpc, send, sol, systemTransfer } from "@gl-36/cluster";
 
 const PROJECT = "genloss";
 const generatorHash = createHash("sha256").update(readFileSync(new URL("../generator/genloss-gen.js", import.meta.url))).digest();

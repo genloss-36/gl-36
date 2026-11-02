@@ -38,7 +38,7 @@ Four bytes instead of eight is what keeps a slot at 36 bytes. A thousand lamport
 The price resets to `0` whenever the owner changes — after a `buy` and after a `transfer` — so a listing never survives a change of hands.
 
 ```ts
-import { priceToLamports, priceToSol, solToPrice } from "@gl36/sdk";
+import { priceToLamports, priceToSol, solToPrice } from "@gl-36/sdk";
 
 priceToLamports(slot.price); // 250_000 → 250_000_000n
 solToPrice("0.25");          // 250_000

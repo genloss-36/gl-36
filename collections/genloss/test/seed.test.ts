@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { generateKeyPairSigner, getAddressEncoder } from "@solana/kit";
-import { tokenSeed } from "@gl36/sdk";
-import mainnet from "@gl36/deployments/mainnet.json" with { type: "json" };
+import { tokenSeed } from "@gl-36/sdk";
+import mainnet from "@gl-36/deployments/mainnet.json" with { type: "json" };
 import { artSeed, hex } from "../generator/genloss-gen.js";
 
 test("the generator derives seeds exactly as the SDK's tokenSeed with the genloss/v1 domain", async () => {

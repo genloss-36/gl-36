@@ -25,7 +25,7 @@ seeds = ["col", creator, nonce as u32 little-endian]
 The nonce lets one creator run any number of collections from the same key. It is stored in the header and chosen at `init`.
 
 ```ts
-import { findCollection } from "@gl36/sdk";
+import { findCollection } from "@gl-36/sdk";
 
 const [collection, bump] = await findCollection(PROGRAM, creator.address, 1);
 ```
@@ -91,7 +91,7 @@ See [Slots](/docs/slots/) for what the fields allow and how ids work.
 The client's `decodeCollection` turns the raw bytes into a typed object with every slot. It throws if the tag or version don't match:
 
 ```ts
-import { decodeCollection } from "@gl36/sdk";
+import { decodeCollection } from "@gl-36/sdk";
 
 const col = decodeCollection(bytes);
 col.minted;       // number

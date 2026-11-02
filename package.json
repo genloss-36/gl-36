@@ -15,9 +15,9 @@
     "collections/*"
   ],
   "scripts": {
-    "build": "npm run build -w @gl36/sdk",
-    "test": "npm test -w @gl36/sdk && npm test -w genloss",
-    "typecheck": "npm run typecheck -w @gl36/sdk",
+    "build": "npm run build -w @gl-36/sdk",
+    "test": "npm test -w @gl-36/sdk && npm test -w genloss",
+    "typecheck": "npm run typecheck -w @gl-36/sdk",
     "check": "npm run check -w gl36-docs && npm run check -w genloss",
     "docs": "npm run dev -w gl36-docs",
     "genloss": "npm run dev -w genloss"

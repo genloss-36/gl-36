@@ -1,5 +1,5 @@
 import { atom } from "nanostores";
-import type { Collection } from "@gl36/sdk";
+import type { Collection } from "@gl-36/sdk";
 import { COLLECTIONS, type CollectionCfg } from "./config";
 
 const COL_KEY = "genloss.collection";

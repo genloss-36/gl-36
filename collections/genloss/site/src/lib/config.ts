@@ -1,4 +1,4 @@
-import mainnet from "@gl36/deployments/mainnet.json";
+import mainnet from "@gl-36/deployments/mainnet.json";
 
 export interface CollectionCfg {
   id: string;

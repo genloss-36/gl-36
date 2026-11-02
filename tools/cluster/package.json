@@ -1,5 +1,5 @@
 {
-  "name": "@gl36/cluster",
+  "name": "@gl-36/cluster",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -8,7 +8,7 @@
     ".": "./scripts/cluster.ts"
   },
   "dependencies": {
-    "@gl36/sdk": "*",
+    "@gl-36/sdk": "*",
     "@solana/kit": "8.5.0"
   },
   "engines": {

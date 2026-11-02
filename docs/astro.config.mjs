@@ -16,7 +16,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        "@gl36/sdk": fileURLToPath(new URL("../packages/sdk/src/index.ts", import.meta.url)),
+        "@gl-36/sdk": fileURLToPath(new URL("../packages/sdk/src/index.ts", import.meta.url)),
       },
       dedupe: ["@solana/kit"],
     },
