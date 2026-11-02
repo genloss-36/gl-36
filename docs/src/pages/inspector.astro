@@ -121,10 +121,10 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
     const items: [string, string][] = [
       ["State", state(c)],
       ["Minted", `${int(c.minted)} / ${int(c.maxSupply)}`],
-      ["Mint price", c.mintPrice ? `${sol(c.mintPrice)} SOL` : "Free"],
+      ["Mint price", c.mintPrice ? `${sol(c.mintPrice)}\u00a0SOL` : "Free"],
       ["Listed", int(c.slots.filter((s) => s.price > 0).length)],
       ["Account", `${int(a.data.length)} B`],
-      ["Balance", `${sol(a.lamports)} SOL`],
+      ["Balance", `${sol(a.lamports)}\u00a0SOL`],
     ];
     box.replaceChildren(
       ...items.map(([k, v]) => {
@@ -185,7 +185,7 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
         id.setAttribute("align", "right");
         const owner = document.createElement("td");
         owner.append(link(explorerAddress(s.owner), s.owner));
-        const price = el("td", s.price ? `${sol(BigInt(s.price) * PRICE_UNIT)} SOL` : "—");
+        const price = el("td", s.price ? `${sol(BigInt(s.price) * PRICE_UNIT)}\u00a0SOL` : "—");
         price.setAttribute("align", "right");
         const off = el("td", String(224 + s.id * 36), "mono dim");
         off.setAttribute("align", "right");
@@ -317,7 +317,7 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   }
   .query input,
   .rpc input {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
     height: 44px;
     padding: 0 16px;
@@ -401,7 +401,8 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   }
   .summary :global(.v) {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: clamp(21px, 5.6vw, 28px);
+    white-space: nowrap;
     font-weight: 600;
     letter-spacing: -0.024em;
     font-variant-numeric: tabular-nums;
@@ -551,6 +552,12 @@ import { COLLECTIONS, FEATURED, CLUSTER } from "../lib/config";
   @media (max-width: 960px) {
     .cols {
       grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px), (pointer: coarse) {
+    .query input,
+    .rpc input {
+      font-size: 16px;
     }
   }
   @media (max-width: 560px) {
