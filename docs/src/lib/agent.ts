@@ -1,0 +1,16 @@
+import { FEATURED } from "./config";
+
+const SITE = new URL(import.meta.env.SITE ?? "https://gl36.org");
+
+export const SKILL_INSTALL = `npx skills add ${SITE.origin}`;
+
+export const AGENT_PROMPT = [
+  `Set up this project to build on GL-36, the Solana NFT standard where a whole collection is one account and each token is a 36-byte slot. Docs: ${new URL("/docs/", SITE).href}`,
+  "",
+  `1. Install the GL-36 agent skill: ${SKILL_INSTALL} -y`,
+  "2. Read the SKILL.md it installed and follow it for all GL-36 work.",
+  "3. Add @gl36/sdk and @solana/kit with this project's package manager.",
+  `4. Check that it works: with the SDK, read the devnet collection ${FEATURED.address} and tell me its state, how many tokens are minted and which are listed.`,
+  "",
+  "Then ask me what I want to build.",
+].join("\n");

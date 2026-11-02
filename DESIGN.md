@@ -154,6 +154,8 @@ Measured on devnet, instructions cost between about 400 compute units (`transfer
 - **Workspace.** The root `package.json` is one npm workspace for `packages/*`, `deployments`, `tools/*`, `docs` and `collections/*`, with one lockfile and one copy of kit and Astro.
 - **Release.** 0.x tracks devnet. Publishing needs the `gl36` npm organisation; `publishConfig` asks for public access and provenance.
 
+- **Agent skill.** `skills/gl36/SKILL.md` (skills.sh layout) teaches coding agents to integrate GL-36 through the SDK: the account model, reads, transactions, price units, the `buy` guard, errors, logs, content and reveal; `references/protocol.md` has the byte layout, instruction layouts and errors, `references/launch.md` the launch walkthrough. Every TypeScript example in it is type-checked against the published SDK types, and the read examples were run against devnet. The docs site serves the same folder at `/.well-known/agent-skills/` (discovery schema 0.2.0: an `index.json` and a reproducible `gl36.tar.gz` with its sha256), so `npx skills add https://gl36.org` installs it without a Git host, and the landing page and Quickstart offer a copy-paste prompt that has an agent install the skill and the SDK.
+
 ## 8. Projects and deployments
 
 - **Layout.** Shared: `program/`, `packages/sdk/` (`@gl36/sdk`), `docs/`, `deployments/` (`@gl36/deployments`), `tools/devnet/` (`@gl36/devnet`: keys, RPC, send-and-confirm helpers and `devnet-e2e.ts`). Per mint: `collections/<name>/`, one workspace package named after the project, holding its generator, its site (`site/`, run with `astro --root site`), its deploy script and tests.

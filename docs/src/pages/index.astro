@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import AgentPrompt from "../components/AgentPrompt.astro";
 import CostCalculator from "../components/CostCalculator.astro";
 import SlotDiagram from "../components/SlotDiagram.astro";
 import { FEATURED, explorerAddress } from "../lib/config";
@@ -52,6 +53,7 @@ const principles = [
       <div class="cta">
         <a class="btn" href="/docs/">Read the docs</a>
         <a class="btn ghost" href="/docs/quickstart/">Quickstart</a>
+        <AgentPrompt cta />
       </div>
     </section>
 
@@ -348,7 +350,7 @@ const principles = [
 
   @media (max-width: 960px) {
     .intro {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 32px;
     }
     .principles {

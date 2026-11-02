@@ -2,6 +2,7 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import Base from "./Base.astro";
+import AgentPrompt from "../components/AgentPrompt.astro";
 import { NAV, ORDER, groupOf, docHref } from "../data/nav";
 import "../styles/prose.css";
 import "../styles/code.css";
@@ -81,6 +82,7 @@ const schema = [
         </nav>
         <h1 class="title page-title">{entry.data.title}</h1>
         <p class="lead">{entry.data.description}</p>
+        {entry.data.agent && <AgentPrompt />}
       </header>
       <article class="prose">
         <slot />

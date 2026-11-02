@@ -4,6 +4,7 @@ GL-36 is an NFT standard for Solana where a token takes 36 bytes: 32 for the own
 
 - Docs: [gl36.org](https://gl36.org)
 - SDK: [`@gl36/sdk`](packages/sdk) on npm
+- Agent skill: [`skills/gl36`](skills/gl36) for Claude Code, Codex, Cursor and other coding agents
 - First collection: [GENLOSS](collections/genloss), minted at [genloss.gl36.org](https://genloss.gl36.org)
 
 > The program is unaudited and deployed on devnet only. Do not use it with real funds. See [SECURITY.md](SECURITY.md).
@@ -19,6 +20,7 @@ The standard and everything shared sits at the top level. Each mint built on it 
 | [`docs/`](docs) | The docs site at gl36.org: Astro + MDX, with an account inspector |
 | [`deployments/`](deployments) | `@gl36/deployments`: where the program and every collection are deployed, per cluster |
 | [`tools/devnet/`](tools/devnet) | `@gl36/devnet`: cluster helpers for deploy scripts, and a run of every instruction against a live cluster |
+| [`skills/gl36/`](skills/gl36) | An agent skill that teaches coding agents to integrate GL-36 with the SDK |
 | [`collections/genloss/`](collections/genloss) | GENLOSS: its art generator, mint site and deploy script |
 | [`DESIGN.md`](DESIGN.md) | Account layout, instructions, costs, and how the SDK, the docs and GENLOSS are built |
 
@@ -65,6 +67,16 @@ npm install && npm test
 Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb?cluster=devnet). Every collection on it is listed in [`deployments/devnet.json`](deployments/devnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
 
 To deploy your own copy, put keypairs in `.keys/` (`deployer.json`, `treasury.json`, `alice.json`, `bob.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run seed -w genloss`. Set `RPC_URL` to use another endpoint.
+
+## Agent skill
+
+[`skills/gl36`](skills/gl36/SKILL.md) gives a coding agent what it needs to build on GL-36 correctly: the account model, the SDK calls for reading, minting, listing, buying and transferring, price units, the stale-listing guard in `buy`, error and log parsing, reveal, and a launch walkthrough, with the byte layout in `references/`. gl36.org serves it as a [well-known agent skill](https://skills.sh), so one command installs it into any project:
+
+```bash
+npx skills add https://gl36.org
+```
+
+The [Quickstart](https://gl36.org/docs/quickstart/) and the landing page also offer a prompt to paste into an agent: it installs the skill and the SDK, checks them against devnet and asks what to build.
 
 ## Adding a collection
 

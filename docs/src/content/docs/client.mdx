@@ -5,12 +5,17 @@ description: The @gl36/sdk package — instruction builders, account decoding, R
 ---
 
 import Note from "../../components/Note.astro";
+import { SKILL_INSTALL } from "../../lib/agent";
 
 `@gl36/sdk` is a small ESM package with types. Its only dependency is `@solana/kit` 8.5 or newer, declared as a peer so your app and the SDK share one copy. Builders return kit `Instruction` objects, so they compose with any kit transaction pipeline and any Wallet Standard signer. It runs on Node 20.19+ and in the browser.
 
 ```bash
 npm install @gl36/sdk @solana/kit
 ```
+
+<Note label="AI coding agents">
+  The <code>gl36</code> skill teaches Claude Code, Codex, Cursor and other agents to use this SDK the way this page describes: price units, the stale-listing guard in <code>buyIx</code>, error and log parsing, reveal and launch. Install it with <code>{SKILL_INSTALL}</code>, or copy the setup prompt from the [Quickstart](/docs/quickstart/).
+</Note>
 
 <Note label="Version">
   0.x follows the devnet deployment. The account layout and the program address may still change before mainnet; a new layout gets a new <code>version</code> byte and a new SDK minor version.

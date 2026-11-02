@@ -1,0 +1,204 @@
+---
+import { AGENT_PROMPT as prompt, SKILL_INSTALL } from "../lib/agent";
+
+interface Props {
+  cta?: boolean;
+}
+const { cta = false } = Astro.props;
+---
+
+{
+  cta ? (
+    <div class="ap cta" data-agent data-prompt={prompt}>
+      <button type="button" class="btn ghost" data-copy>
+        <span class="ap-swap">
+          <span class="ap-idle">Copy agent prompt</span>
+          <span class="ap-done">Copied</span>
+        </span>
+      </button>
+      <span class="sr-only" role="status" data-agent-status />
+    </div>
+  ) : (
+    <div class="ap" data-agent data-prompt={prompt}>
+      <div class="ap-row">
+        <button type="button" class="ap-copy press" data-copy>
+          <span class="ap-swap ap-icons" aria-hidden="true">
+            <svg class="ap-idle" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="5.25" y="5.25" width="8.5" height="8.5" rx="2" />
+              <path d="M10.75 3.5V3.25a1 1 0 0 0-1-1h-6.5a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.25" />
+            </svg>
+            <svg class="ap-done" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3.5 8.5 3 3 6-7" />
+            </svg>
+          </span>
+          <span class="ap-swap">
+            <span class="ap-idle">Copy prompt for your agent</span>
+            <span class="ap-done">Copied</span>
+          </span>
+        </button>
+        <button type="button" class="ap-toggle" aria-expanded="false" aria-controls="agent-prompt" data-toggle>
+          Show prompt
+        </button>
+      </div>
+      <div class="ap-more" id="agent-prompt" hidden>
+        <div class="ap-prompt mono" translate="no">{prompt}</div>
+        <p class="ap-foot">
+          Only the skill: <code>{SKILL_INSTALL}</code>
+        </p>
+      </div>
+      <span class="sr-only" role="status" data-agent-status />
+    </div>
+  )
+}
+
+<script>
+  function fallbackCopy(text: string) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    return ok;
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-agent]").forEach((box) => {
+    const button = box.querySelector<HTMLButtonElement>("[data-copy]")!;
+    const status = box.querySelector<HTMLElement>("[data-agent-status]")!;
+    let timer = 0;
+    button.addEventListener("click", async () => {
+      const text = box.dataset.prompt ?? "";
+      let ok: boolean;
+      try {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } catch {
+        ok = fallbackCopy(text);
+      }
+      button.toggleAttribute("data-done", ok);
+      status.textContent = ok ? "Prompt copied. Paste it into your agent." : "Couldn't copy the prompt.";
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        button.removeAttribute("data-done");
+        status.textContent = "";
+      }, 2000);
+    });
+
+    const toggle = box.querySelector<HTMLButtonElement>("[data-toggle]");
+    const more = box.querySelector<HTMLElement>(".ap-more");
+    if (toggle && more) {
+      toggle.addEventListener("click", () => {
+        const open = more.hidden;
+        more.hidden = !open;
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.textContent = open ? "Hide prompt" : "Show prompt";
+      });
+    }
+  });
+</script>
+
+<style>
+  .ap {
+    margin-top: 28px;
+  }
+  .ap.cta {
+    display: contents;
+  }
+  .ap-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+  .ap-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 16px 0 13px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+  .ap-copy:hover {
+    opacity: 0.84;
+  }
+  .ap-toggle {
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    font-size: 14px;
+    color: var(--fg-2);
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+  }
+  .ap-toggle:hover,
+  .ap-toggle[aria-expanded="true"] {
+    color: var(--fg);
+  }
+
+  .ap-swap {
+    display: grid;
+  }
+  .ap-swap > * {
+    grid-area: 1 / 1;
+  }
+  .ap-icons > * {
+    transition: opacity 0.2s var(--ease), transform 0.35s var(--spring), visibility 0.2s;
+  }
+  [data-copy] .ap-done,
+  [data-copy][data-done] .ap-idle {
+    visibility: hidden;
+    opacity: 0;
+  }
+  [data-copy][data-done] .ap-done {
+    visibility: visible;
+    opacity: 1;
+  }
+  .ap-icons .ap-done,
+  .ap-copy[data-done] .ap-icons .ap-idle {
+    transform: scale(0.6);
+  }
+  .ap-copy[data-done] .ap-icons .ap-done {
+    transform: none;
+  }
+
+  .ap-more {
+    margin-top: 18px;
+  }
+  .ap-prompt {
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--fg-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .ap-foot {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg-3);
+  }
+  .ap-foot code {
+    padding: 0.12em 0.36em;
+    border-radius: 6px;
+    background: var(--bg-elev-2);
+    color: var(--fg-2);
+    font-size: 0.92em;
+    overflow-wrap: anywhere;
+  }
+</style>
