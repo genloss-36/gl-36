@@ -1,14 +1,17 @@
 import base64, json, math, random, struct, urllib.request
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 DOCS = Path(__file__).resolve().parent.parent
 ROOT = DOCS.parent
 FONT = next(p for p in (d / "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" for d in (DOCS, ROOT)) if p.exists())
 W, H, M = 1200, 630, 64
 SS = 2
-INK, INK2, BG = (245, 245, 247), (161, 161, 166), (0, 0, 0)
+INK, INK2, BG, FIELD = (245, 245, 247), (161, 161, 166), (0, 0, 0), (72, 72, 74)
 HEADER, SLOT, COLS = 224, 36, 36
+MASK = ((0.0, 1.0), (0.34, 1.0), (0.70, 0.14), (1.0, 0.08))
+SQUIRCLE = 1.4
+CORNER = [(math.cos(t) ** 0.5, math.sin(t) ** 0.5) for t in (i / 16 * math.pi / 2 for i in range(17))]
 
 def account() -> bytes:
     cfg = json.loads((ROOT / "deployments/devnet.json").read_text())
@@ -45,13 +48,19 @@ def cells(data: bytes, rows: int):
                 i = HEADER + (r - header_rows) * SLOT + c
                 yield r, c, data[i] if i < len(data) else None
 
-def fade(y: float) -> float:
-    t = y / H
-    if t < 0.28:
-        return 1.0
-    if t < 0.56:
-        return 1.0 - (t - 0.28) / 0.28 * 0.9
-    return 0.1 - (t - 0.56) / 0.44 * 0.05
+def fade(t: float) -> float:
+    for (a, va), (b, vb) in zip(MASK, MASK[1:]):
+        if t <= b:
+            return va + (vb - va) * (t - a) / (b - a)
+    return MASK[-1][1]
+
+def squircle(x0, y0, x1, y1, r):
+    pts = []
+    for cx, cy, sx, sy, rev in ((x0 + r, y0 + r, -1, -1, False), (x1 - r, y0 + r, 1, -1, True),
+                                (x1 - r, y1 - r, 1, 1, False), (x0 + r, y1 - r, -1, 1, True)):
+        arc = [(cx + sx * r * u, cy + sy * r * v) for u, v in CORNER]
+        pts += arc[::-1] if rev else arc
+    return pts
 
 def font(size: int, weight: int):
     f = ImageFont.truetype(str(FONT), size * SS)
@@ -66,28 +75,27 @@ def text(dr, x, y, s, f, fill, track):
 
 def mark(dr, x, y, size, fill):
     u = size / 24
-    dr.rounded_rectangle((x, y, x + 16 * u, y + 16 * u), radius=3.6 * u, fill=fill)
-    dr.rounded_rectangle((x + 18.34 * u, y + 18.34 * u, x + 24 * u, y + 24 * u), radius=1.4 * u, fill=fill)
+    for a, b, r in ((0, 16, 3.6), (18.34, 24, 1.4)):
+        dr.polygon(squircle(x + a * u, y + a * u, x + b * u, y + b * u, r * SQUIRCLE * u), fill=fill)
 
 def card(data: bytes) -> Image.Image:
-    img = Image.new("RGB", (W * SS, H * SS), BG)
-    dr = ImageDraw.Draw(img)
+    field = Image.new("L", (W * SS, H * SS), 0)
+    fd = ImageDraw.Draw(field)
     cell = W / COLS
     rows = math.ceil(H / cell)
     for r, c, v in cells(data, rows):
-        cy = (r + 0.5) * cell
-        a = fade(cy)
         if v is None:
-            size, a = cell * 0.1, a * 0.22
+            size, a = cell * 0.1, 0.22
         else:
-            size = cell * (0.14 + 0.68 * math.sqrt(v / 255))
-        if size < 0.6:
-            continue
-        cx = (c + 0.5) * cell
-        shade = tuple(round(BG[k] + (INK[k] - BG[k]) * a) for k in range(3))
-        h = size / 2
-        dr.rounded_rectangle(((cx - h) * SS, (cy - h) * SS, (cx + h) * SS, (cy + h) * SS),
-                             radius=size * 0.3 * SS, fill=shade)
+            size, a = cell * (0.14 + 0.68 * math.sqrt(v / 255)), 1.0
+        cx, cy, h = (c + 0.5) * cell, (r + 0.5) * cell, size / 2
+        fd.polygon(squircle((cx - h) * SS, (cy - h) * SS, (cx + h) * SS, (cy + h) * SS, size * 0.3 * SQUIRCLE * SS),
+                   fill=round(255 * a))
+    ramp = Image.new("L", (1, H * SS))
+    ramp.putdata([round(255 * fade((y + 0.5) / (H * SS))) for y in range(H * SS)])
+    alpha = ImageChops.multiply(field, ramp.resize(field.size, Image.NEAREST))
+    img = Image.composite(Image.new("RGB", field.size, FIELD), Image.new("RGB", field.size, BG), alpha)
+    dr = ImageDraw.Draw(img)
 
     display = font(132, 700)
     lead = 132 * 0.94
