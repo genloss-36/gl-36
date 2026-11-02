@@ -24,7 +24,7 @@ Run from the repository root after `npm install`:
 | `npm run check -w genloss` | `astro check` for the site |
 | `npm test -w genloss` | Seed and registry tests |
 | `npm run generator -w genloss -- 36` | Hashes the generator, renders ids 0 to 35 twice to prove determinism and rewrites `generator/vectors.json`; a diff there means the art changed |
-| `npm run launch -w genloss` | Creates Genesis if it doesn't exist yet and records it; needs keys in `.keys/` |
+| `npm run launch -w genloss` | Creates Genesis if it doesn't exist yet, funds its treasury and records it; needs `.keys/deployer.json` |
 
 The page hashes the served generator and compares it with the collection's on-chain `generator_hash`. Collection nonces are derived from the generator's hash, so launching after a generator change creates a fresh collection whose `generator_hash` matches. To browse pieces without the site:
 

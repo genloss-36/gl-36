@@ -46,5 +46,5 @@ Compute units of each instruction, measured with LiteSVM against the current bin
 Minting one token at a price of 0.01 SOL costs the minter about 0.010188 SOL in total: the price, 182,880 lamports of rent for 36 bytes and the network fee.
 
 <Note label="Verifying the program">
-  Build <code>program/</code> with <code>cargo build-sbf</code> and compare the hash of <code>target/deploy/gl36.so</code> with the program data on chain, for example with <code>solana-verify</code>.
+  The deployed binary is a verifiable build. In <code>program/</code>, run <code>solana-verify build --base-image solanafoundation/solana-verifiable-build:4.3.0 --library-name gl36</code>, then compare <code>solana-verify get-executable-hash target/deploy/gl36.so</code> with <code>solana-verify get-program-hash</code> for the program address.
 </Note>

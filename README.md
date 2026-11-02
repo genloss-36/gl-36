@@ -49,6 +49,12 @@ Requirements: Node 24 or newer (tests and scripts run `.ts` files directly), and
 cd program && cargo build-sbf
 ```
 
+The binary that goes on chain is built with [solana-verify](https://github.com/Ellipsis-Labs/solana-verifiable-build) in its Docker image, so anyone can rebuild it byte for byte and compare the hash with the deployed program:
+
+```bash
+cd program && solana-verify build --base-image solanafoundation/solana-verifiable-build:4.3.0 --library-name gl36
+```
+
 ```bash
 npm install && npm test
 ```
@@ -66,7 +72,7 @@ npm install && npm test
 
 Program: [`GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb`](https://explorer.solana.com/address/GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb). Every collection on it is listed in [`deployments/mainnet.json`](deployments/mainnet.json) with the project it belongs to. The docs show all of them; each mint site shows its own.
 
-To deploy your own copy, put keypairs in `.keys/` (`deployer.json` and `treasury.json`; the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run launch -w genloss`. Set `RPC_URL` to use another endpoint.
+To deploy your own copy, put the deployer keypair in `.keys/deployer.json` (the folder is git-ignored), deploy `gl36.so` with its keypair from `program/target/deploy/`, then run a collection's deploy script, for example `npm run launch -w genloss`. Set `RPC_URL` to use another endpoint.
 
 ## Agent skill
 
