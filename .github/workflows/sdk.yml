@@ -46,11 +46,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - name: Tag matches package version
         run: test "sdk-v$(node -p "require('./packages/sdk/package.json').version")" = "${GITHUB_REF_NAME}"
-      - run: npm publish -w @gl-36/sdk --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm stage publish -w @gl-36/sdk --provenance --access public
