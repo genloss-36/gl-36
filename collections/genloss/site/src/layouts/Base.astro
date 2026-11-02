@@ -51,5 +51,18 @@ const image = abs(`${base}${lang === "zh" ? "og-zh.png" : "og.png"}`);
   </head>
   <body>
     <slot />
+    <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+      {
+        [14, 12, 10, 8, 6, 4].map((s) => (
+          <filter id={`qr-${s}`} x="-5%" y="-25%" width="110%" height="150%">
+            <feFlood x={s / 2 - 1} y={s / 2 - 1} width="2" height="2" />
+            <feComposite width={s} height={s} />
+            <feTile result="grid" />
+            <feComposite in="SourceGraphic" in2="grid" operator="in" />
+            <feMorphology operator="dilate" radius={s / 2 - 1} />
+          </filter>
+        ))
+      }
+    </svg>
   </body>
 </html>
