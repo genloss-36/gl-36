@@ -6,7 +6,9 @@ export type Gl36Event =
   | { type: "transfer"; id: number }
   | { type: "list"; id: number; price: number }
   | { type: "buy"; id: number; price: number }
-  | { type: "reveal" }
+  | { type: "close"; minted: number }
+  | { type: "settle" }
+  | { type: "rearm" }
   | { type: "withdraw"; lamports: bigint };
 
 const INVOKE = /^Program (\w+) invoke \[\d+\]$/;
@@ -39,8 +41,14 @@ function parseEvent(message: string): Gl36Event | null {
       const v = ints(rest, 2);
       return v && { type: "buy", id: v[0], price: v[1] };
     }
-    case "reveal":
-      return rest.length === 0 ? { type: "reveal" } : null;
+    case "close": {
+      const v = ints(rest, 1);
+      return v && { type: "close", minted: v[0] };
+    }
+    case "settle":
+      return rest.length === 0 ? { type: "settle" } : null;
+    case "rearm":
+      return rest.length === 0 ? { type: "rearm" } : null;
     case "withdraw":
       return rest.length === 1 && /^\d+$/.test(rest[0]) ? { type: "withdraw", lamports: BigInt(rest[0]) } : null;
     default:

@@ -12,7 +12,9 @@ Each successful instruction writes one `Program log:` line. Together with the si
 | `transfer` | `xfer <id>` | New owner is account 2 of the instruction. |
 | `list` | `list <id> <price>` | Price in units of 1,000 lamports; `0` is a delist. |
 | `buy` | `buy <id> <price>` | Buyer is account 0, seller account 2. |
-| `reveal` | `reveal` | |
+| `close` | `close <minted>` | Supply at which the creator closed the mint. |
+| `settle` | `settle` | The entropy is written. |
+| `settle` | `rearm` | The target slot was gone; `close_slot` moved to the current slot. |
 | `withdraw_excess` | `withdraw <lamports>` | Amount moved to the creator. |
 
 ## Reading history

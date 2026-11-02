@@ -14,7 +14,7 @@ npm install @gl-36/sdk @solana/kit
 ```
 
 <Note label="AI coding agents">
-  The <code>gl36</code> skill teaches Claude Code, Codex, Cursor and other agents to use this SDK the way this page describes: price units, the stale-listing guard in <code>buyIx</code>, error and log parsing, reveal and launch. Install it with <code>{SKILL_INSTALL}</code>, or copy the setup prompt from the [Quickstart](/docs/quickstart/).
+  The <code>gl36</code> skill teaches Claude Code, Codex, Cursor and other agents to use this SDK the way this page describes: price units, the stale-listing guard in <code>buyIx</code>, error and log parsing, closing, settling and launch. Install it with <code>{SKILL_INSTALL}</code>, or copy the setup prompt from the [Quickstart](/docs/quickstart/).
 </Note>
 
 <Note label="Version">
@@ -39,7 +39,7 @@ Derives the collection PDA from `["col", creator, nonce as u32 LE]` and returns 
 
 ## Instruction builders
 
-Signers are kit `TransactionSigner`s; everything else is an `Address`. Prices are `u32` units of 1,000 lamports. Each builder checks its arguments and throws a `RangeError` for anything the program would refuse: a count outside 1–10, a fee above 1,000 bps, a supply of 0, a price outside u32, a secret that isn't 32 bytes.
+Signers are kit `TransactionSigner`s; everything else is an `Address`. Prices are `u32` units of 1,000 lamports. Each builder checks its arguments and throws a `RangeError` for anything the program would refuse: a count outside 1–10, a fee above 1,000 bps, a supply of 0, a price outside u32, a generator hash that isn't 32 bytes.
 
 | Function | Arguments |
 | --- | --- |
@@ -48,8 +48,9 @@ Signers are kit `TransactionSigner`s; everything else is an `Address`. Prices ar
 | `transferIx` | `(programId, owner, collection, newOwner, id)` |
 | `listIx` | `(programId, owner, collection, id, price)` |
 | `buyIx` | `(programId, buyer, collection, seller, treasury, id, maxPrice)` |
-| `revealIx` | `(programId, creator, collection, secret)` |
+| `closeIx` | `(programId, creator, collection)` |
 | `withdrawExcessIx` | `(programId, creator, collection)` |
+| `settleIx` | `(programId, collection)` |
 
 ```ts
 interface InitArgs {
@@ -57,7 +58,6 @@ interface InitArgs {
   maxSupply: number;
   feeBps: number;
   mintPrice: bigint;
-  provenance: Uint8Array;
   generatorHash: Uint8Array;
 }
 ```
@@ -91,7 +91,8 @@ These work on raw bytes, from any source.
 | `decodeHeader(data)` | Header fields only; 224 bytes are enough. |
 | `decodeSlot(bytes, id)` | One 36-byte slot. |
 | `isCollectionAccount(data)` | Tag, version and `224 + minted × 36` length all match. |
-| `collectionState(col)` | `"open"`, `"closed"` or `"revealed"`. |
+| `collectionState(col)` | `"open"`, `"closed"` or `"settled"`. |
+| `entropySlot(col)` | `close_slot + 32`: the first slot whose hash `settle` can take. |
 | `listedSlots(col)` | Listed slots, cheapest first. |
 | `slotsOwnedBy(col, owner)` | Slots of one owner. |
 | `accountLength(minted)`, `slotOffset(id)` | Sizes and offsets for `dataSlice` and `memcmp`. |
@@ -108,8 +109,7 @@ interface Collection {
   mintPrice: bigint;
   creator: Address;
   treasury: Address;
-  provenance: Uint8Array;
-  secret: Uint8Array;
+  closeSlot: bigint;
   entropy: Uint8Array;
   generatorHash: Uint8Array;
   slots: Slot[];
@@ -130,7 +130,7 @@ interface Slot {
 parseLogs(logs: readonly string[], programId: Address): Gl36Event[]
 ```
 
-Turns a transaction's log messages into events: `init`, `mint`, `transfer`, `list`, `buy`, `reveal`, `withdraw`. Only lines written by the given program count, so a CPI or another program can't inject events. See [Logs](/docs/logs/).
+Turns a transaction's log messages into events: `init`, `mint`, `transfer`, `list`, `buy`, `close`, `settle`, `rearm`, `withdraw`. Only lines written by the given program count, so a CPI or another program can't inject events. See [Logs](/docs/logs/).
 
 ```ts
 parseProgramError(error: unknown, { programId? }): { code, name, program?, instructionIndex? } | null
@@ -149,14 +149,13 @@ Finds the custom error in a kit `SolanaError`, its cause chain, simulation logs 
 
 Conversions are exact decimal arithmetic, never floating point. Anything below 0.000001 SOL or above the u32 ceiling throws a `RangeError`.
 
-## Provenance and seeds
+## Seeds
 
 ```ts
-provenanceOf(secret: Uint8Array): Promise<Uint8Array>
-tokenSeed({ domain, collection, secret, entropy, id }): Promise<Uint8Array>
+tokenSeed({ domain, collection, entropy, id }): Promise<Uint8Array>
 ```
 
-`provenanceOf` is the `sha256(secret)` that goes into `init`. `tokenSeed` computes `sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id u16 LE)` with WebCrypto, the seed a generator turns into content. See [Provenance and reveal](/docs/provenance/).
+`tokenSeed` computes `sha256(domain ‖ collection ‖ entropy ‖ id u16 LE)` with WebCrypto, the seed a generator turns into content. Use it once the collection is settled. See [Provenance and entropy](/docs/provenance/).
 
 ## Constants
 
@@ -170,8 +169,9 @@ tokenSeed({ domain, collection, secret, entropy, id }): Promise<Uint8Array>
 | `MAX_SUPPLY` | `65_535` |
 | `MAX_MINT_BATCH` | `10` |
 | `MAX_FEE_BPS` | `1_000` |
-| `FLAG_REVEALED` | `1` |
+| `FLAG_SETTLED` | `1` |
 | `FLAG_CLOSED` | `2` |
+| `SETTLE_DELAY` | `32n` |
 | `COLLECTION_TAG`, `LAYOUT_VERSION` | `1`, `1` |
 
 ## Without the SDK

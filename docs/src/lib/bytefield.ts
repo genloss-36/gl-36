@@ -217,7 +217,6 @@ export function sampleAccount(minted = 12): Uint8Array {
   };
   fill(24, 32);
   fill(56, 32);
-  fill(88, 32);
   fill(184, 32);
   const owners = [0, 1, 2].map(() => Array.from({ length: 32 }, rnd));
   for (let id = 0; id < minted; id++) {

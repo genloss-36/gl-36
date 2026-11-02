@@ -1,5 +1,5 @@
 import { address, createSolanaRpc, getAddressEncoder, mainnet, type Address } from "@solana/kit";
-import { FLAG_REVEALED, decodeCollection } from "@gl-36/sdk";
+import { FLAG_SETTLED, decodeCollection } from "@gl-36/sdk";
 import { rpcUrl } from "./config";
 import { $balance, $chain, $chainError, $collectionId, $wallet, collectionCfg } from "./store";
 import { loadGen, type Traits } from "./generator";
@@ -31,7 +31,7 @@ export function refresh(): Promise<void> {
         if (!value) throw new Error("Collection account not found on this cluster");
         const col = decodeCollection(b64(value.data[0]));
         if ($collectionId.get() !== cfg.id) return;
-        $chain.set({ cfgId: cfg.id, col, lamports: BigInt(value.lamports), revealed: (col.flags & FLAG_REVEALED) !== 0, fetchedAt: Date.now() });
+        $chain.set({ cfgId: cfg.id, col, lamports: BigInt(value.lamports), revealed: (col.flags & FLAG_SETTLED) !== 0, fetchedAt: Date.now() });
         $chainError.set(null);
       } catch (e) {
         $chainError.set(e instanceof Error ? e.message : String(e));
@@ -66,7 +66,7 @@ export async function seedFor(id: number): Promise<Uint8Array | null> {
   if (hit) return hit;
   const g = await loadGen();
   const addrBytes = new Uint8Array(getAddressEncoder().encode(address(collectionCfg()!.address)));
-  const seed = g.artSeed(addrBytes, s.col.secret, s.col.entropy, id);
+  const seed = g.artSeed(addrBytes, s.col.entropy, id);
   seeds.set(key, seed);
   return seed;
 }

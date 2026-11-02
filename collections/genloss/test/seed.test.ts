@@ -11,10 +11,9 @@ test("the generator derives seeds exactly as the SDK's tokenSeed with the genlos
   const collection = (await generateKeyPairSigner()).address;
   const bytes = new Uint8Array(getAddressEncoder().encode(collection));
   for (const id of [0, 1, 255, 256, 4999]) {
-    const secret = new Uint8Array(32).fill(id & 0xff);
-    const entropy = new Uint8Array(32).fill(7);
-    const sdk = await tokenSeed({ domain: "genloss/v1", collection, secret, entropy, id });
-    assert.equal(hex(artSeed(bytes, secret, entropy, id)), hex(sdk));
+    const entropy = new Uint8Array(32).fill(id & 0xff);
+    const sdk = await tokenSeed({ domain: "genloss/v1", collection, entropy, id });
+    assert.equal(hex(artSeed(bytes, entropy, id)), hex(sdk));
   }
 });
 

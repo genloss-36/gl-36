@@ -8,8 +8,9 @@ pub const PRICE_UNIT: u64 = 1_000;
 pub const MAX_MINT_BATCH: u8 = 10;
 pub const MAX_FEE_BPS: u16 = 1_000;
 pub const BPS_DENOM: u64 = 10_000;
+pub const SETTLE_DELAY: u64 = 32;
 
-pub const FLAG_REVEALED: u8 = 1 << 0;
+pub const FLAG_SETTLED: u8 = 1 << 0;
 pub const FLAG_CLOSED: u8 = 1 << 1;
 
 pub const OFF_TAG: usize = 0;
@@ -23,8 +24,7 @@ pub const OFF_NONCE: usize = 12;
 pub const OFF_MINT_PRICE: usize = 16;
 pub const OFF_CREATOR: usize = 24;
 pub const OFF_TREASURY: usize = 56;
-pub const OFF_PROVENANCE: usize = 88;
-pub const OFF_SECRET: usize = 120;
+pub const OFF_CLOSE_SLOT: usize = 88;
 pub const OFF_ENTROPY: usize = 152;
 pub const OFF_GENERATOR: usize = 184;
 

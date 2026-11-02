@@ -1,6 +1,6 @@
 ---
 name: gl36
-description: Build on GL-36, the Solana NFT standard where a whole collection is one program-owned account and each token is a 36-byte slot (32-byte owner, 4-byte price), with the @gl-36/sdk TypeScript package on @solana/kit. Use this skill whenever the user mentions GL-36, gl36, @gl-36/sdk, gl36.org, GENLOSS, or the program GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb, or wants to read a GL-36 collection, show its tokens in a wallet, marketplace or bot, mint, list, delist, buy or transfer GL-36 tokens, track sales from logs, launch or reveal a GL-36 collection, decode its account bytes, or explain a "custom program error" from it, even if they only paste a collection address or an error.
+description: Build on GL-36, the Solana NFT standard where a whole collection is one program-owned account and each token is a 36-byte slot (32-byte owner, 4-byte price), with the @gl-36/sdk TypeScript package on @solana/kit. Use this skill whenever the user mentions GL-36, gl36, @gl-36/sdk, gl36.org, GENLOSS, or the program GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb, or wants to read a GL-36 collection, show its tokens in a wallet, marketplace or bot, mint, list, delist, buy or transfer GL-36 tokens, track sales from logs, launch, close or settle a GL-36 collection, decode its account bytes, or explain a "custom program error" from it, even if they only paste a collection address or an error.
 metadata:
   author: gl36
   version: "0.1.0"
@@ -14,7 +14,7 @@ Keep this model in mind, because it changes how integrations should be written:
 
 - **One read gives everything.** `getAccountInfo` on the collection returns every owner and every listing. There is no indexer or DAS API to query, and none is needed.
 - **A token is `(collection address, id)`.** Ids are 0 to `minted − 1`, in mint order, never reused.
-- **Content is computed, not stored.** A collection pins the sha256 of its generator; content is generated off-chain from a seed once the collection is revealed. There is no URI or JSON metadata to fetch.
+- **Content is computed, not stored.** A collection pins the sha256 of its generator; content is generated off-chain from a seed once the collection is settled. There is no URI or JSON metadata to fetch.
 - **No royalties.** A collection may set one market fee (0–10%) paid to its treasury on every sale.
 
 Status: program `GtUakBxu2UXwv68PkLYmkzyAUtLXwqhtbi7W8GUmPmTb` (`PROGRAM_ID.mainnet`) on Solana mainnet. It has not been audited; say so before a user puts real funds into it.
@@ -43,7 +43,7 @@ listedSlots(col).map((s) => `${s.id}: ${priceToSol(s.price)} SOL`);
 slotsOwnedBy(col, address(wallet));
 ```
 
-Pass `programId` so the fetch throws on an account owned by another program instead of misreading it. `collectionState` is `"open"` (minting), `"closed"` (sold out or closed early) or `"revealed"` (content can be computed).
+Pass `programId` so the fetch throws on an account owned by another program instead of misreading it. `collectionState` is `"open"` (minting), `"closed"` (sold out or closed early, waiting for `settle`) or `"settled"` (content can be computed).
 
 Other reads, all taking a kit `Rpc`:
 
@@ -168,23 +168,23 @@ for (const { signature, err } of sigs) {
 }
 ```
 
-Event types: `init`, `mint` (`firstId`, `count`), `transfer` (`id`), `list` (`id`, `price`; `price: 0` is a delist), `buy` (`id`, `price`), `reveal`, `withdraw` (`lamports`). RPC nodes may prune old transactions; archive events if history must be permanent.
+Event types: `init`, `mint` (`firstId`, `count`), `transfer` (`id`), `list` (`id`, `price`; `price: 0` is a delist), `buy` (`id`, `price`), `close` (`minted`), `settle`, `rearm`, `withdraw` (`lamports`). RPC nodes may prune old transactions; archive events if history must be permanent.
 
 ## Showing content
 
-Before reveal (`collectionState(col) !== "revealed"`), content does not exist yet: show a placeholder, never a guess. After reveal, a token's seed is
+Until the collection is settled (`collectionState(col) !== "settled"`), content does not exist yet: show a placeholder, never a guess. A closed collection becomes settled when anyone sends `settleIx` at least 32 slots after `col.closeSlot`; a front end can offer that as a button. After that, a token's seed is
 
 ```ts
 import { tokenSeed } from "@gl-36/sdk";
 
-const seed = await tokenSeed({ domain, collection, secret: col.secret, entropy: col.entropy, id });
+const seed = await tokenSeed({ domain, collection, entropy: col.entropy, id });
 ```
 
 where `domain` is fixed by the collection's generator (for GENLOSS, `"genloss/v1"`). Run the collection's published generator on the seed, and check the generator file's sha256 against `col.generatorHash` before trusting its output.
 
 ## Launching a collection
 
-Everything about a collection is fixed by one `init`: supply, mint price, market fee, treasury, the generator hash and the commitment to a secret. Read [references/launch.md](references/launch.md) before writing a launch script: it covers the secret and provenance, choosing a nonce, `init`, closing the mint, `reveal`, and `withdraw_excess` after rent cuts.
+Everything about a collection is fixed by one `init`: supply, mint price, market fee, treasury and the generator hash. Read [references/launch.md](references/launch.md) before writing a launch script: it covers the generator hash, choosing a nonce, `init`, funding the treasury, closing and settling the mint, and `withdraw_excess` after rent cuts.
 
 ## Without the SDK
 

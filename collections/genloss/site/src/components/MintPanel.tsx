@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { FLAG_CLOSED, SLOT_LEN, mintIx } from "@gl-36/sdk";
+import { FLAG_CLOSED, SLOT_LEN, mintIx, settleIx } from "@gl-36/sdk";
 import type { Lang } from "../i18n/strings";
 import { COLLECTIONS, CONFIG } from "../lib/config";
 import { $chain, $chainError, $collectionId, $wallet } from "../lib/store";
@@ -44,6 +44,14 @@ export default function MintPanel({ lang }: { lang: Lang }) {
     );
   }
 
+  const settle = async () => {
+    if (!chain) return;
+    setBusy(true);
+    const cfg = COLLECTIONS.find((c) => c.id === chain.cfgId)!;
+    await attempt(lang, "toast.settle", () => [settleIx(asAddress(CONFIG.programId), asAddress(cfg.address))]);
+    setBusy(false);
+  };
+
   const mint = async () => {
     if (!col || !chain) return;
     setBusy(true);
@@ -78,7 +86,14 @@ export default function MintPanel({ lang }: { lang: Lang }) {
 
       {soldOut || closed ? (
         <>
-          <button className="btn block" disabled>{soldOut ? tr("mint.soldOut") : tr("mint.closed")}</button>
+          {chain && !chain.revealed ? (
+            <>
+              <button className="btn primary block" onClick={wallet ? settle : openConnect} disabled={busy}>{busy ? tr("mint.busy") : tr("mint.settle")}</button>
+              <p className="fine">{tr("mint.settleNote")}</p>
+            </>
+          ) : (
+            <button className="btn block" disabled>{soldOut ? tr("mint.soldOut") : tr("mint.closed")}</button>
+          )}
           {other && (
             <p className="fine center">
               <button className="link" style={{ fontSize: 15 }} onClick={() => $collectionId.set(other.id)}>{tr("mint.other", { name: other.title })}</button>

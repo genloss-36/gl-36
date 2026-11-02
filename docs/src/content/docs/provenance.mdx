@@ -1,51 +1,52 @@
 ---
-title: Provenance and reveal
+title: Provenance and entropy
 nav: Provenance
-description: How a GL-36 collection commits to its content before the mint, and why neither collectors nor the creator can pick tokens in advance.
+description: How a GL-36 collection fixes its content without a secret, and why neither collectors nor the creator can pick tokens in advance.
 ---
 
 import Note from "../../components/Note.astro";
 
-GL-36 doesn't store metadata. A token's content is computed off-chain by a **generator** — deterministic code published by the creator — from a seed that only exists once the mint is over. Three header fields make this verifiable.
+GL-36 doesn't store metadata. A token's content is computed off-chain by a **generator** — deterministic code published by the creator — from a seed that only exists once the mint is over. Three header fields make this verifiable, and none of them is secret.
 
 | Field | Set at | Purpose |
 | --- | --- | --- |
 | `generator_hash` | `init` | sha256 of the generator. Pins the code that turns seeds into content. |
-| `provenance` | `init` | `sha256(secret)`. Commits the creator to a secret without revealing it. |
-| `entropy` | mint closes | Latest slot hash from the `SlotHashes` sysvar. Unknown to everyone until then. |
-| `secret` | `reveal` | The preimage of `provenance`, checked by the program. |
+| `close_slot` | mint closes | The slot in which the mint closed. The entropy comes from a slot after it. |
+| `entropy` | `settle` | The hash of the first slot at or after `close_slot + 32`, read from the `SlotHashes` sysvar. |
 
 ## Token seed
 
-The program stores the inputs; the seed is a convention between the generator and the front ends that run it. Once revealed, the seed of token `id` is
+The program stores the inputs; the seed is a convention between the generator and the front ends that run it. Once the collection is settled, the seed of token `id` is
 
 ```
-seed(id) = sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id as u16 little-endian)
+seed(id) = sha256(domain ‖ collection ‖ entropy ‖ id as u16 little-endian)
 ```
 
 `domain` is a string fixed by the generator, such as `"genloss/v1"`. `collection` is the 32-byte account address. The generator turns the seed into content; nothing else goes in.
 
 ## Why this is fair
 
-- **Collectors can't choose.** Until `reveal`, the secret is unknown, so no one can compute what any id will be and mint or buy only the good ones.
-- **The creator can't choose either.** The secret is fixed by `provenance` before the first mint. The entropy is a slot hash taken when the mint closes, which the creator doesn't control when committing. They can't steer good tokens to their own ids.
+- **Nobody can choose.** When the mint closes, the slot whose hash becomes the entropy hasn't been produced yet. The last minter, the creator and everyone else learn the art at the same moment, after every id already has an owner.
+- **Nothing can leak or get lost.** There is no secret to commit to, keep offline or publish later. A collection can't be stuck unrevealed because a key is gone.
 - **The code can't change.** `generator_hash` is fixed at `init`. Anyone can hash the published generator and compare.
+
+The one party that touches the entropy is the validator that produces the target slot: its hash depends on the block it builds. Steering that hash toward a chosen piece would mean building and discarding many blocks within one 400 ms slot.
 
 ## Lifecycle
 
-1. **init** — the creator picks a random 32-byte secret, stores `sha256(secret)` as `provenance` and the generator's hash as `generator_hash`.
-2. **mint** — tokens are minted. Content is not computable yet; front ends show a placeholder.
-3. **close** — the last mint that reaches `max_supply` writes the entropy and sets `CLOSED`. Or the creator closes early with `reveal`.
-4. **reveal** — the creator publishes the secret. The program checks `sha256(secret) == provenance`, stores it and sets `REVEALED`. If the mint was still open, it also writes the entropy and lowers `max_supply` to `minted`.
+1. **init** — the creator stores the generator's hash as `generator_hash`.
+2. **mint** — tokens are minted. Content can't be computed yet; front ends show a placeholder.
+3. **close** — the last mint that reaches `max_supply` sets `CLOSED` and records `close_slot`. The creator can close early with `close`, which also lowers `max_supply` to `minted`.
+4. **settle** — once slot `close_slot + 32` has passed (about 13 seconds), anyone calls `settle`. It writes the entropy and sets `SETTLED`. From then on every token's content is fixed.
 
 ```ts
-import { revealIx } from "@gl-36/sdk";
+import { settleIx } from "@gl-36/sdk";
 
-await send(creator, [revealIx(PROGRAM, creator, COLLECTION, secret)]);
+await send(anyone, [settleIx(PROGRAM, COLLECTION)]);
 ```
 
-<Note label="Keep the secret">
-  If the secret is lost, the collection can never be revealed: the program accepts only the preimage of <code>provenance</code>. Store it like a private key. If it leaks before the mint closes, the first part of the fairness argument is gone.
+<Note label="If nobody settles in time">
+  `SlotHashes` keeps the last 512 slots, about three and a half minutes. If the target slot has already dropped out when `settle` runs, it re-arms instead: it moves `close_slot` to the current slot and logs `rearm`. Call `settle` again 32 slots later. A front end can settle as soon as it sees a closed collection.
 </Note>
 
 ## Generators

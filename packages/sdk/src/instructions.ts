@@ -7,8 +7,9 @@ export const INSTRUCTION = {
   transfer: 2,
   list: 3,
   buy: 4,
-  reveal: 5,
+  close: 5,
   withdrawExcess: 6,
+  settle: 7,
 } as const;
 
 export interface InitArgs {
@@ -16,7 +17,6 @@ export interface InitArgs {
   maxSupply: number;
   feeBps: number;
   mintPrice: bigint;
-  provenance: Uint8Array;
   generatorHash: Uint8Array;
 }
 
@@ -82,15 +82,13 @@ export function initIx(
   int("maxSupply", a.maxSupply, 1, MAX_SUPPLY);
   int("feeBps", a.feeBps, 0, MAX_FEE_BPS);
   if (a.mintPrice < 0n || a.mintPrice > 0xffff_ffff_ffff_ffffn) throw new RangeError(`mintPrice must be a u64, got ${a.mintPrice}`);
-  bytes32("provenance", a.provenance);
   bytes32("generatorHash", a.generatorHash);
-  const data = new Writer(81)
+  const data = new Writer(49)
     .u8(INSTRUCTION.init)
     .u32(a.nonce)
     .u16(a.maxSupply)
     .u16(a.feeBps)
     .u64(a.mintPrice)
-    .bytes(a.provenance)
     .bytes(a.generatorHash).buf;
   return {
     programAddress: programId,
@@ -109,7 +107,7 @@ export function mintIx(
   int("count", count, 1, MAX_MINT_BATCH);
   return {
     programAddress: programId,
-    accounts: [signer(minter, true), w(collection), w(creator), r(SLOT_HASHES), r(SYSTEM_PROGRAM)],
+    accounts: [signer(minter, true), w(collection), w(creator), r(SYSTEM_PROGRAM)],
     data: new Writer(2).u8(INSTRUCTION.mint).u8(count).buf,
   };
 }
@@ -163,17 +161,19 @@ export function buyIx(
   };
 }
 
-export function revealIx(
-  programId: Address,
-  creator: TransactionSigner,
-  collection: Address,
-  secret: Uint8Array,
-): Instruction {
-  bytes32("secret", secret);
+export function closeIx(programId: Address, creator: TransactionSigner, collection: Address): Instruction {
   return {
     programAddress: programId,
-    accounts: [signer(creator, false), w(collection), r(SLOT_HASHES)],
-    data: new Writer(33).u8(INSTRUCTION.reveal).bytes(secret).buf,
+    accounts: [signer(creator, false), w(collection)],
+    data: new Uint8Array([INSTRUCTION.close]),
+  };
+}
+
+export function settleIx(programId: Address, collection: Address): Instruction {
+  return {
+    programAddress: programId,
+    accounts: [w(collection), r(SLOT_HASHES)],
+    data: new Uint8Array([INSTRUCTION.settle]),
   };
 }
 

@@ -1,4 +1,4 @@
-export const VERSION = "genloss-gen/4";
+export const VERSION = "genloss-gen/5";
 export const SIZE = 256;
 const W2 = SIZE * 2;
 
@@ -58,8 +58,8 @@ function concat(...parts) {
 
 const u16le = (v) => new Uint8Array([v & 0xff, (v >> 8) & 0xff]);
 
-export function artSeed(collection, secret, entropy, id) {
-  return sha256(concat(utf8("genloss/v1"), collection, secret, entropy, u16le(id)));
+export function artSeed(collection, entropy, id) {
+  return sha256(concat(utf8("genloss/v1"), collection, entropy, u16le(id)));
 }
 
 export function previewSeed(id) {

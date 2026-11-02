@@ -70,7 +70,7 @@ The buyer must hold the price plus the network fee. The market fee comes out of 
 
 ## Show content
 
-Before reveal (`flags & 1 === 0`), show a placeholder: content does not exist yet. After reveal, compute the seed from the header and the id, run the collection's generator, and check the generator file against `generator_hash` before trusting its output. See [Provenance and reveal](/docs/provenance/).
+Until the collection is settled (`flags & 1 === 0`), show a placeholder: content does not exist yet. When it is closed but not settled, offer a button that sends `settleIx` — anyone may. After that, compute the seed from the header and the id, run the collection's generator, and check the generator file against `generator_hash` before trusting its output. See [Provenance and entropy](/docs/provenance/).
 
 ## Explain errors
 

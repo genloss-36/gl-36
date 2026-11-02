@@ -23,7 +23,7 @@ pub fn init(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
     let [creator, collection, treasury, _system, ..] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
-    args_len(args, 80)?;
+    args_len(args, 48)?;
     signer(creator)?;
 
     let nonce = [args[0], args[1], args[2], args[3]];
@@ -75,15 +75,14 @@ pub fn init(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
     write_u64(&mut d, OFF_MINT_PRICE, mint_price);
     write_key(&mut d, OFF_CREATOR, creator.address().as_array());
     write_key(&mut d, OFF_TREASURY, treasury.address().as_array());
-    d[OFF_PROVENANCE..OFF_PROVENANCE + 32].copy_from_slice(&args[16..48]);
-    d[OFF_GENERATOR..OFF_GENERATOR + 32].copy_from_slice(&args[48..80]);
+    d[OFF_GENERATOR..OFF_GENERATOR + 32].copy_from_slice(&args[16..48]);
 
     log!("init {}", max_supply);
     Ok(())
 }
 
 pub fn mint(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> ProgramResult {
-    let [minter, collection, creator, slot_hashes, _system, ..] = accounts else {
+    let [minter, collection, creator, _system, ..] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
     args_len(args, 1)?;
@@ -126,11 +125,8 @@ pub fn mint(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
         Transfer { from: minter, to: creator, lamports: cost }.invoke()?;
     }
 
-    let entropy = if new_minted == max_supply {
-        Some(latest_slot_hash(slot_hashes)?)
-    } else {
-        None
-    };
+    let sold_out = new_minted == max_supply;
+    let now = if sold_out { current_slot()? } else { 0 };
 
     collection.resize(new_len)?;
     let mut d = collection.try_borrow_mut()?;
@@ -138,8 +134,8 @@ pub fn mint(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> 
         write_key(&mut d, slot_off(id), minter.address().as_array());
     }
     write_u16(&mut d, OFF_MINTED, new_minted);
-    if let Some(e) = entropy {
-        d[OFF_ENTROPY..OFF_ENTROPY + 32].copy_from_slice(&e);
+    if sold_out {
+        write_u64(&mut d, OFF_CLOSE_SLOT, now);
         d[OFF_FLAGS] |= FLAG_CLOSED;
     }
 
@@ -238,44 +234,66 @@ pub fn buy(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> P
     Ok(())
 }
 
-pub fn reveal(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> ProgramResult {
-    let [creator, collection, slot_hashes, ..] = accounts else {
+pub fn close(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> ProgramResult {
+    let [creator, collection, ..] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
-    args_len(args, 32)?;
+    args_len(args, 0)?;
     signer(creator)?;
     check_collection(program_id, collection)?;
 
-    let closed = {
-        let d = collection.try_borrow()?;
-        if key(&d, OFF_CREATOR) != creator.address().as_array() {
-            return Err(Error::WrongCreator.into());
-        }
-        if d[OFF_FLAGS] & FLAG_REVEALED != 0 {
-            return Err(Error::AlreadyRevealed.into());
-        }
-        if sha256(&[args]) != d[OFF_PROVENANCE..OFF_PROVENANCE + 32] {
-            return Err(Error::BadSecret.into());
-        }
-        d[OFF_FLAGS] & FLAG_CLOSED != 0
-    };
-    let entropy = if closed {
-        None
-    } else {
-        Some(latest_slot_hash(slot_hashes)?)
-    };
-
+    let now = current_slot()?;
     let mut d = collection.try_borrow_mut()?;
-    d[OFF_SECRET..OFF_SECRET + 32].copy_from_slice(args);
-    d[OFF_FLAGS] |= FLAG_REVEALED;
-    if let Some(e) = entropy {
-        d[OFF_ENTROPY..OFF_ENTROPY + 32].copy_from_slice(&e);
-        d[OFF_FLAGS] |= FLAG_CLOSED;
-        let minted = read_u16(&d, OFF_MINTED);
-        write_u16(&mut d, OFF_MAX_SUPPLY, minted);
+    if key(&d, OFF_CREATOR) != creator.address().as_array() {
+        return Err(Error::WrongCreator.into());
     }
+    if d[OFF_FLAGS] & FLAG_CLOSED != 0 {
+        return Err(Error::MintClosed.into());
+    }
+    let minted = read_u16(&d, OFF_MINTED);
+    write_u16(&mut d, OFF_MAX_SUPPLY, minted);
+    write_u64(&mut d, OFF_CLOSE_SLOT, now);
+    d[OFF_FLAGS] |= FLAG_CLOSED;
 
-    log!("reveal");
+    log!("close {}", minted);
+    Ok(())
+}
+
+pub fn settle(program_id: &Address, accounts: &mut [AccountView], args: &[u8]) -> ProgramResult {
+    let [collection, slot_hashes, ..] = accounts else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+    args_len(args, 0)?;
+    check_collection(program_id, collection)?;
+
+    let target = {
+        let d = collection.try_borrow()?;
+        if d[OFF_FLAGS] & FLAG_CLOSED == 0 {
+            return Err(Error::NotClosed.into());
+        }
+        if d[OFF_FLAGS] & FLAG_SETTLED != 0 {
+            return Err(Error::AlreadySettled.into());
+        }
+        read_u64(&d, OFF_CLOSE_SLOT)
+            .checked_add(SETTLE_DELAY)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+    };
+
+    match slot_hash_from(slot_hashes, target)? {
+        SlotHash::Found(h) => {
+            let mut d = collection.try_borrow_mut()?;
+            d[OFF_ENTROPY..OFF_ENTROPY + 32].copy_from_slice(&h);
+            d[OFF_FLAGS] |= FLAG_SETTLED;
+            log!("settle");
+        }
+        SlotHash::NotYet => return Err(Error::TooEarly.into()),
+        SlotHash::Gone => {
+            let now = current_slot()?;
+            let mut d = collection.try_borrow_mut()?;
+            write_u64(&mut d, OFF_CLOSE_SLOT, now);
+            log!("rearm");
+        }
+    }
     Ok(())
 }
 

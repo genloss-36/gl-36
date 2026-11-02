@@ -11,13 +11,14 @@ In the account tables, **W** is writable and **S** is signer. Accounts must be p
 
 | Tag | Instruction | Data | Signer |
 | ---: | --- | ---: | --- |
-| 0 | [`init`](#init) | 81 B | creator |
+| 0 | [`init`](#init) | 49 B | creator |
 | 1 | [`mint`](#mint) | 2 B | minter |
 | 2 | [`transfer`](#transfer) | 3 B | owner |
 | 3 | [`list`](#list) | 7 B | owner |
 | 4 | [`buy`](#buy) | 7 B | buyer |
-| 5 | [`reveal`](#reveal) | 33 B | creator |
+| 5 | [`close`](#close) | 1 B | creator |
 | 6 | [`withdraw_excess`](#withdraw_excess) | 1 B | creator |
+| 7 | [`settle`](#settle) | 1 B | anyone |
 
 Every instruction except `init` first checks that the collection account is owned by the program, is writable, has tag and version `1`, and that its length is `224 + minted × 36`.
 
@@ -32,8 +33,7 @@ Creates a collection account at the PDA `["col", creator, nonce]` with a 224-byt
 | 5 | 2 | `max_supply` u16 |
 | 7 | 2 | `fee_bps` u16 |
 | 9 | 8 | `mint_price` u64 |
-| 17 | 32 | `provenance` |
-| 49 | 32 | `generator_hash` |
+| 17 | 32 | `generator_hash` |
 
 | # | Account | Access | Notes |
 | ---: | --- | --- | --- |
@@ -60,15 +60,14 @@ Mints `count` tokens to the signer. Grows the account by `count × 36` bytes.
 | 0 | minter | W S | pays price and rent, becomes owner |
 | 1 | collection | W | |
 | 2 | creator | W | must match the header, receives the price |
-| 3 | SlotHashes sysvar | | `SysvarS1otHashes111111111111111111111111111` |
-| 4 | System Program | | |
+| 3 | System Program | | |
 
 1. Transfers `max(0, rent_min(new_len) − lamports)` from the minter to the collection.
 2. Transfers `mint_price × count` from the minter to the creator, if non-zero.
 3. Resizes the account and writes the minter as owner of each new slot, with price `0`.
-4. If `minted` reaches `max_supply`, writes the latest slot hash as `entropy` and sets `CLOSED`.
+4. If `minted` reaches `max_supply`, records the current slot as `close_slot` and sets `CLOSED`.
 
-Fails with `BadBatch` (2), `WrongCreator` (13), `MintClosed` (10), `SoldOut` (1), `ArithmeticOverflow` if `mint_price × count` doesn't fit in a u64, and `BadSysvar` (17) on the mint that closes the collection. Logs `mint <first_id> <count>`.
+Fails with `BadBatch` (2), `WrongCreator` (13), `MintClosed` (10), `SoldOut` (1), and `ArithmeticOverflow` if `mint_price × count` doesn't fit in a u64. Logs `mint <first_id> <count>`.
 
 ## transfer
 
@@ -126,24 +125,39 @@ Transfers `price × 1,000 − fee` lamports to the seller and `fee = price × 1,
 
 Fails with `SelfBuy` (7), `BadId` (15), `SellerMismatch` (6), `WrongTreasury` (14), `NotListed` (4), `PriceAboveMax` (5). Logs `buy <id> <price>`.
 
-## reveal
+## close
 
-Publishes the secret. Closes the mint first if it is still open.
+Ends the mint early at the current supply.
 
 | Offset | Size | Argument |
 | ---: | ---: | --- |
 | 0 | 1 | tag `5` |
-| 1 | 32 | `secret` |
 
 | # | Account | Access | Notes |
 | ---: | --- | --- | --- |
 | 0 | creator | S | must match the header |
 | 1 | collection | W | |
-| 2 | SlotHashes sysvar | | |
 
-Checks `sha256(secret) == provenance`, writes `secret` and sets `REVEALED`. If `CLOSED` is not set, also writes `entropy`, sets `CLOSED` and lowers `max_supply` to `minted`.
+Lowers `max_supply` to `minted`, records the current slot as `close_slot` and sets `CLOSED`.
 
-Fails with `WrongCreator` (13), `AlreadyRevealed` (9), `BadSecret` (8), `BadSysvar` (17). Logs `reveal`.
+Fails with `WrongCreator` (13) and `MintClosed` (10) if the mint is already closed. Logs `close <minted>`.
+
+## settle
+
+Fixes the entropy of a closed collection. Anyone can call it; only the fee payer signs.
+
+| Offset | Size | Argument |
+| ---: | ---: | --- |
+| 0 | 1 | tag `7` |
+
+| # | Account | Access | Notes |
+| ---: | --- | --- | --- |
+| 0 | collection | W | |
+| 1 | SlotHashes sysvar | | `SysvarS1otHashes111111111111111111111111111` |
+
+Looks up the first slot at or after `close_slot + 32` in `SlotHashes`, writes its hash as `entropy` and sets `SETTLED`. If that slot has already dropped out of the sysvar's 512 entries, it re-arms instead: `close_slot` becomes the current slot, nothing else changes, and the call succeeds so that the next one can settle 32 slots later.
+
+Fails with `NotClosed` (8) while the mint is open, `AlreadySettled` (9), `TooEarly` (18) before the target slot has passed, `BadSysvar` (17). Logs `settle`, or `rearm` when it re-arms.
 
 ## withdraw_excess
 

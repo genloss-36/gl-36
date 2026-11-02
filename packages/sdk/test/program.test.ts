@@ -1,7 +1,6 @@
 import { after, before, describe, test } from "node:test";
 import { existsSync } from "node:fs";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { FailedTransactionMetadata, LiteSVM, Rent, type TransactionMetadata } from "litesvm";
 import {
@@ -9,6 +8,7 @@ import {
   appendTransactionMessageInstructions,
   createTransactionMessage,
   generateKeyPairSigner,
+  getBase58Encoder,
   lamports,
   pipe,
   setTransactionMessageFeePayerSigner,
@@ -20,7 +20,7 @@ import {
 import {
   ERR,
   FLAG_CLOSED,
-  FLAG_REVEALED,
+  FLAG_SETTLED,
   HEADER_LEN,
   PRICE_UNIT,
   SLOT_LEN,
@@ -30,7 +30,9 @@ import {
   initIx,
   listIx,
   mintIx,
-  revealIx,
+  closeIx,
+  settleIx,
+  entropySlot,
   transferIx,
   withdrawExcessIx,
   parseLogs,
@@ -43,8 +45,6 @@ const SOL = 1_000_000_000n;
 const MINT_PRICE = 10_000_000n;
 const FEE_BPS = 200;
 
-const secret = createHash("sha256").update("test secret").digest();
-const provenance = createHash("sha256").update(secret).digest();
 const generatorHash = new Uint8Array(32).fill(7);
 
 const cu = new Map<string, bigint[]>();
@@ -103,7 +103,7 @@ async function setup(maxSupply: number, nonce = 0): Promise<Ctx> {
   const [collection] = await findCollection(programId, creator.address, nonce);
   ok(await send(svm, creator, [
     initIx(programId, creator, collection, treasury.address, {
-      nonce, maxSupply, feeBps: FEE_BPS, mintPrice: MINT_PRICE, provenance, generatorHash,
+      nonce, maxSupply, feeBps: FEE_BPS, mintPrice: MINT_PRICE, generatorHash,
     }),
   ], "init"));
   return { svm, programId, creator, treasury, alice, bob, collection };
@@ -135,12 +135,12 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
       assert.equal(s.mintPrice, MINT_PRICE);
       assert.equal(s.creator, c.creator.address);
       assert.equal(s.treasury, c.treasury.address);
-      assert.deepEqual(s.provenance, new Uint8Array(provenance));
+      assert.equal(s.closeSlot, 0n);
       assert.deepEqual(s.generatorHash, generatorHash);
       assert.equal(s.lamports, c.svm.minimumBalanceForRentExemption(BigInt(HEADER_LEN)));
 
       const [col1] = await findCollection(c.programId, c.creator.address, 1);
-      const base = { nonce: 1, maxSupply: 10, feeBps: 0, mintPrice: 0n, provenance, generatorHash };
+      const base = { nonce: 1, maxSupply: 10, feeBps: 0, mintPrice: 0n, generatorHash };
       const valid = initIx(c.programId, c.creator, col1, c.treasury.address, base);
       fails(await send(c.svm, c.creator, [patched(valid, 7, [0xe9, 0x03])]), ERR.BadFee);
       fails(await send(c.svm, c.creator, [patched(valid, 5, [0, 0])]), ERR.BadSupply);
@@ -150,7 +150,7 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
 
     test("can't be blocked by lamports sent to the address first", async () => {
       const c = await setup(10);
-      const base = { maxSupply: 10, feeBps: 0, mintPrice: 0n, provenance, generatorHash };
+      const base = { maxSupply: 10, feeBps: 0, mintPrice: 0n, generatorHash };
       const min = c.svm.minimumBalanceForRentExemption(BigInt(HEADER_LEN));
 
       const [dust] = await findCollection(c.programId, c.creator.address, 1);
@@ -200,7 +200,7 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
       const [col] = await findCollection(c.programId, c.creator.address, 1);
       ok(await send(c.svm, c.creator, [
         initIx(c.programId, c.creator, col, c.treasury.address, {
-          nonce: 1, maxSupply: 10, feeBps: 0, mintPrice: 2n ** 63n, provenance, generatorHash,
+          nonce: 1, maxSupply: 10, feeBps: 0, mintPrice: 2n ** 63n, generatorHash,
         }),
       ]));
       const creatorBefore = bal(c, c.creator.address);
@@ -217,15 +217,17 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
       fails(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.bob.address, 1)]), ERR.WrongCreator);
     });
 
-    test("sell-out sets entropy and closes minting", async () => {
+    test("sell-out closes minting and records the slot", async () => {
       const c = await setup(4);
       ok(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.creator.address, 3)]));
       fails(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.creator.address, 2)]), ERR.SoldOut);
+      c.svm.warpToSlot(500n);
       ok(await send(c.svm, c.bob, [mintIx(c.programId, c.bob, c.collection, c.creator.address, 1)], "mint x1 (sell-out)"));
       const s = state(c);
       assert.equal(s.minted, 4);
-      assert.equal(s.flags & FLAG_CLOSED, FLAG_CLOSED);
-      assert.ok(s.entropy.some((b) => b !== 0));
+      assert.equal(s.flags, FLAG_CLOSED);
+      assert.equal(s.closeSlot, 500n);
+      assert.ok(s.entropy.every((b) => b === 0));
       fails(await send(c.svm, c.bob, [mintIx(c.programId, c.bob, c.collection, c.creator.address, 1)]), ERR.MintClosed);
     });
   });
@@ -293,21 +295,72 @@ describe("program on LiteSVM", { skip: SKIP }, () => {
     });
   });
 
-  describe("reveal", () => {
-    test("checks secret and creator, closes minting, is one-shot", async () => {
+  describe("close and settle", () => {
+    const slotHashes = (c: Ctx, entries: [bigint, string][]) =>
+      c.svm.setSlotHashes(
+        entries.map(([slot, hash]) => {
+          const [entry] = c.svm.getSlotHashes();
+          entry.slot = slot;
+          entry.hash = hash;
+          return entry;
+        }),
+      );
+    const hashes = () => Promise.all([0, 1, 2].map(async () => (await generateKeyPairSigner()).address as string));
+    const bytes = (hash: string) => new Uint8Array(getBase58Encoder().encode(hash));
+
+    test("close ends the mint early, only for the creator", async () => {
       const c = await setup(5000);
       ok(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.creator.address, 5)]));
-      const wrong = new Uint8Array(32).fill(1);
-      fails(await send(c.svm, c.creator, [revealIx(c.programId, c.creator, c.collection, wrong)]), ERR.BadSecret);
-      fails(await send(c.svm, c.alice, [revealIx(c.programId, c.alice, c.collection, secret)]), ERR.WrongCreator);
-      ok(await send(c.svm, c.creator, [revealIx(c.programId, c.creator, c.collection, secret)], "reveal"));
+      c.svm.warpToSlot(1_000n);
+      fails(await send(c.svm, c.alice, [closeIx(c.programId, c.alice, c.collection)]), ERR.WrongCreator);
+      const closed = ok(await send(c.svm, c.creator, [closeIx(c.programId, c.creator, c.collection)], "close"));
+      assert.deepEqual(parseLogs(closed.logs(), c.programId), [{ type: "close", minted: 5 }]);
       const s = state(c);
-      assert.equal(s.flags, FLAG_REVEALED | FLAG_CLOSED);
+      assert.equal(s.flags, FLAG_CLOSED);
       assert.equal(s.maxSupply, 5);
-      assert.deepEqual(s.secret, new Uint8Array(secret));
-      assert.ok(s.entropy.some((b) => b !== 0));
-      fails(await send(c.svm, c.creator, [revealIx(c.programId, c.creator, c.collection, secret)]), ERR.AlreadyRevealed);
+      assert.equal(s.closeSlot, 1_000n);
+      assert.equal(entropySlot(s), 1_032n);
+      fails(await send(c.svm, c.creator, [closeIx(c.programId, c.creator, c.collection)]), ERR.MintClosed);
       fails(await send(c.svm, c.bob, [mintIx(c.programId, c.bob, c.collection, c.creator.address, 1)]), ERR.MintClosed);
+    });
+
+    test("settle takes the first slot hash from close + 32 on, from anyone, once", async () => {
+      const c = await setup(5000);
+      const [h1, h2, h3] = await hashes();
+      ok(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.creator.address, 3)]));
+      fails(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)]), ERR.NotClosed);
+      c.svm.warpToSlot(2_000n);
+      ok(await send(c.svm, c.creator, [closeIx(c.programId, c.creator, c.collection)]));
+
+      slotHashes(c, [[2_031n, h1], [2_020n, h2]]);
+      fails(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)]), ERR.TooEarly);
+
+      slotHashes(c, [[2_040n, h1], [2_034n, h2], [2_031n, h3]]);
+      const settled = ok(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)], "settle"));
+      assert.deepEqual(parseLogs(settled.logs(), c.programId), [{ type: "settle" }]);
+      const s = state(c);
+      assert.equal(s.flags, FLAG_CLOSED | FLAG_SETTLED);
+      assert.deepEqual(s.entropy, bytes(h2));
+      fails(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)]), ERR.AlreadySettled);
+    });
+
+    test("re-arms when the target slot has left SlotHashes", async () => {
+      const c = await setup(10);
+      const [h1, h2, h3] = await hashes();
+      ok(await send(c.svm, c.alice, [mintIx(c.programId, c.alice, c.collection, c.creator.address, 2)]));
+      c.svm.warpToSlot(3_000n);
+      ok(await send(c.svm, c.creator, [closeIx(c.programId, c.creator, c.collection)]));
+
+      c.svm.warpToSlot(9_000n);
+      slotHashes(c, Array.from({ length: 512 }, (_, i): [bigint, string] => [9_000n - BigInt(i), h1]));
+      const rearmed = ok(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)]));
+      assert.deepEqual(parseLogs(rearmed.logs(), c.programId), [{ type: "rearm" }]);
+      assert.equal(state(c).closeSlot, 9_000n);
+      assert.equal(state(c).flags, FLAG_CLOSED);
+
+      slotHashes(c, [[9_040n, h1], [9_033n, h2], [9_031n, h3]]);
+      ok(await send(c.svm, c.bob, [settleIx(c.programId, c.collection)]));
+      assert.deepEqual(state(c).entropy, bytes(h2));
     });
   });
 

@@ -17,7 +17,7 @@ GL-36 keeps only what can't be computed: **who owns a token and what they're ask
 - **About 48× less rent per token.** 36 bytes instead of ~1,720. At today's rate that is 182,880 lamports per token instead of 8.7 million. See [Rent and cost](/docs/rent/).
 - **One read for everything.** A single `getAccountInfo` returns every owner and every listing of a collection. There is no indexer, no DAS API, no Merkle proof to fetch.
 - **A market inside the program.** `list`, `buy` and `transfer` are instructions of the same program that mints. Sales settle in SOL in one transaction with an optional market fee.
-- **A fair reveal.** Art is derived from a secret the creator commits to before the mint and a slot hash taken when the mint closes, so nobody — the creator included — can pick tokens in advance.
+- **Art nobody can pick.** Art is derived from the hash of a slot produced after the mint closes, so nobody — the creator included — can pick tokens in advance, and there is no secret to keep.
 - **Rent that goes back.** Each operation reads the current rent rate from the cluster. When Solana cuts rent, `withdraw_excess` returns the surplus to the creator.
 
 ## What a token is not
@@ -34,7 +34,7 @@ Metadata is not stored either. A collection commits to the hash of its generator
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| Program | `program/` | Rust with Pinocchio 0.12. Seven instructions, ~21.6 KB binary. |
+| Program | `program/` | Rust with Pinocchio 0.12. Eight instructions, ~21.8 KB binary. |
 | SDK | `@gl-36/sdk` | Instruction builders, account decoding, RPC reads, logs and errors, on `@solana/kit`. |
 | Collection account | on chain | 224-byte header plus 36 bytes per minted token. |
 | Generator | off chain | Deterministic code whose sha256 is stored in the collection header. |

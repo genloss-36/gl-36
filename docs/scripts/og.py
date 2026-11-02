@@ -31,7 +31,7 @@ def account() -> bytes:
         d = bytearray(HEADER + minted * SLOT)
         d[0:3] = b"\x01\x01\xfe"
         struct.pack_into("<HH H", d, 4, 5000, minted, 200)
-        for off in (24, 56, 88, 184):
+        for off in (24, 56, 184):
             d[off:off + 32] = bytes(rnd.randrange(256) for _ in range(32))
         owners = [bytes(rnd.randrange(256) for _ in range(32)) for _ in range(3)]
         for i in range(minted):

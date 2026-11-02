@@ -33,6 +33,8 @@ const PROGRAM_ERRORS: Record<number, Key> = {
   [ERR.MintClosed]: "err.closed",
   [ERR.SameOwner]: "err.sameOwner",
   [ERR.BadId]: "err.badId",
+  [ERR.TooEarly]: "err.tooEarly",
+  [ERR.AlreadySettled]: "err.settled",
 };
 
 class TxError extends Error {

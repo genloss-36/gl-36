@@ -55,13 +55,13 @@ try {
 | Area | Exports |
 | --- | --- |
 | Addresses | `PROGRAM_ID`, `SYSTEM_PROGRAM`, `SLOT_HASHES`, `findCollection` |
-| Instructions | `initIx`, `mintIx`, `transferIx`, `listIx`, `buyIx`, `revealIx`, `withdrawExcessIx`, `INSTRUCTION` |
+| Instructions | `initIx`, `mintIx`, `transferIx`, `listIx`, `buyIx`, `closeIx`, `settleIx`, `withdrawExcessIx`, `INSTRUCTION` |
 | RPC | `fetchCollection`, `fetchHeader`, `fetchSlot`, `findCollections`, `getLamportsPerByte` |
-| Decoding | `decodeCollection`, `decodeHeader`, `decodeSlot`, `isCollectionAccount`, `collectionState`, `listedSlots`, `slotsOwnedBy` |
+| Decoding | `decodeCollection`, `decodeHeader`, `decodeSlot`, `isCollectionAccount`, `collectionState`, `entropySlot`, `listedSlots`, `slotsOwnedBy` |
 | Layout | `HEADER_LEN`, `SLOT_LEN`, `HEADER_OFFSET`, `SLOT_OFFSET`, `accountLength`, `slotOffset`, `rentExemptMinimum` |
 | Logs and errors | `parseLogs`, `parseProgramError`, `ERR`, `errorName` |
 | Prices | `solToPrice`, `priceToSol`, `priceToLamports`, `lamportsToPrice` |
-| Provenance | `provenanceOf`, `tokenSeed` |
+| Seeds | `tokenSeed` |
 
 Builders throw a `RangeError` for arguments the program would refuse. Full reference: [gl36.org/docs/client](https://gl36.org/docs/client/).
 

@@ -20,29 +20,30 @@ Every collection belongs to a project: a mint with its own generator and site, s
 | Crate | `gl36` 0.1.0 |
 | Framework | Pinocchio 0.12, `no_std`, no allocator |
 | Target | sBPF v3 |
-| Binary | 21,584 bytes |
+| Binary | 21,848 bytes |
 | Toolchain | Rust 1.89+, Agave CLI 4.x |
 
 The binary is small enough that its own rent — refundable if the program is closed — is about 0.1 SOL at today's rate.
 
 ## Measured
 
-A full cycle on a 5,000-token collection and a 3-token collection that sold out, in 15 transactions:
+Compute units of each instruction, measured with LiteSVM against the current binary:
 
 | Step | Compute units |
 | --- | ---: |
-| `init`, supply 5,000 | 3,253 |
-| `mint` × 1 | 2,971 |
-| `mint` × 10 | 3,189 |
-| `mint` × 3 | 3,064 |
-| `list` | 452 |
-| `buy` | 2,901 |
-| `transfer` | 374 |
-| `list` + delist | 863 |
-| `reveal`, closes the mint | 457 |
-| `withdraw_excess` | 401 |
+| `init`, supply 5,000 | 3,245 |
+| `mint` × 1 | 3,048 |
+| `mint` × 10 | 3,225 |
+| `mint` × 3 | 3,043 |
+| `list` | 453 |
+| `buy` | 2,899 |
+| `transfer` | 356 |
+| `list` + delist | 841 |
+| `close` | 435 |
+| `settle` | 356 |
+| `withdraw_excess` | 515 |
 
-Minting one token at a price of 0.01 SOL cost the minter 0.010188 SOL in total: the price, the rent for 36 bytes and the network fee. All 15 transactions together paid 0.000075 SOL in network fees.
+Minting one token at a price of 0.01 SOL costs the minter about 0.010188 SOL in total: the price, 182,880 lamports of rent for 36 bytes and the network fee.
 
 <Note label="Verifying the program">
   Build <code>program/</code> with <code>cargo build-sbf</code> and compare the hash of <code>target/deploy/gl36.so</code> with the program data on chain, for example with <code>solana-verify</code>.

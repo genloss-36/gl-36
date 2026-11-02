@@ -15,18 +15,18 @@ Header, 224 bytes, little-endian:
 | 0 | 1 | `tag` | `0x01`, marks a collection account |
 | 1 | 1 | `version` | `1` |
 | 2 | 1 | `bump` | PDA bump |
-| 3 | 1 | `flags` | bit 0: revealed; bit 1: entropy set (mint closed) |
-| 4 | 2 | `max_supply` | u16; `reveal` lowers it to `minted` if the mint is still open |
+| 3 | 1 | `flags` | bit 0: settled (entropy set); bit 1: mint closed |
+| 4 | 2 | `max_supply` | u16; `close` lowers it to `minted` |
 | 6 | 2 | `minted` | u16 |
 | 8 | 2 | `fee_bps` | platform fee, at most 1000 (10%) |
 | 10 | 2 | | reserved |
 | 12 | 4 | `nonce` | u32 |
 | 16 | 8 | `mint_price` | lamports, may be 0 |
-| 24 | 32 | `creator` | receives the mint price; the only signer allowed to `reveal` and `withdraw_excess` |
+| 24 | 32 | `creator` | receives the mint price; the only signer allowed to `close` and `withdraw_excess` |
 | 56 | 32 | `treasury` | receives the platform fee |
-| 88 | 32 | `provenance` | `sha256(secret)`, fixed at `init` |
-| 120 | 32 | `secret` | zeros until `reveal` |
-| 152 | 32 | `entropy` | a SlotHashes hash taken when the mint closes |
+| 88 | 8 | `close_slot` | u64, the slot in which the mint closed or `settle` re-armed; 0 while open |
+| 96 | 56 | | reserved |
+| 152 | 32 | `entropy` | hash of the first slot at or after `close_slot + 32`, written by `settle` |
 | 184 | 32 | `generator_hash` | sha256 of the generator file |
 | 216 | 8 | | reserved |
 
@@ -42,12 +42,13 @@ The account is created at header size. Each mint grows it by `count * 36` bytes 
 ### Art seed
 
 ```
-art_seed(id) = sha256("genloss/v1" ‖ collection ‖ secret ‖ entropy ‖ id_u16_le)
+art_seed(id) = sha256("genloss/v1" ‖ collection ‖ entropy ‖ id_u16_le)
 ```
 
-- The creator commits to `secret` through `provenance` before minting and publishes it only afterwards. Until then nobody can compute the art and pick a rare piece.
-- `entropy` comes from SlotHashes when the mint closes: on the last mint at sell-out, or at `reveal`. The creator cannot know it when committing, so they cannot pick rare ids either.
-- Until `reveal`, the site shows static noise for every piece.
+- There is no creator secret. The mint closes on the last mint at sell-out or when the creator calls `close`; either records `close_slot`.
+- `settle`, which anyone can send, takes the hash of the first slot at or after `close_slot + 32` from SlotHashes. That slot doesn't exist when the mint closes, so neither the last minter nor the creator can steer the art. The only influence left is the leader of that slot, who would have to build and discard blocks within 400 ms.
+- SlotHashes holds 512 slots. If `settle` comes after the target slot has dropped out, it re-arms: `close_slot` moves to the current slot and the next `settle` 32 slots later fixes the entropy. Re-arming only helps someone who already knows the old result and could keep everyone else from settling for three minutes, so front ends settle as soon as they see a closed collection.
+- Until `settle`, the site shows static noise for every piece.
 
 ## 2. Instructions
 
@@ -55,17 +56,18 @@ The first data byte is the instruction tag; arguments follow, little-endian. W =
 
 | # | Instruction | Arguments | Accounts | Effect |
 |---|---|---|---|---|
-| 0 | `init` | nonce u32, max_supply u16, fee_bps u16, mint_price u64, provenance [32], generator_hash [32] | creator WS, collection W, treasury, system | Checks the PDA, then creates the account at header size. Lamports already sent to the address are kept and topped up to the rent minimum, so a deposit can't block `init`. |
-| 1 | `mint` | count u8 (1..=10) | minter WS, collection W, creator W, SlotHashes, system | Grows the account, takes `rent_min(new_len) − lamports` and `mint_price * count` from the minter, writes the slots. At `minted == max_supply` it records `entropy`. |
+| 0 | `init` | nonce u32, max_supply u16, fee_bps u16, mint_price u64, generator_hash [32] | creator WS, collection W, treasury, system | Checks the PDA, then creates the account at header size. Lamports already sent to the address are kept and topped up to the rent minimum, so a deposit can't block `init`. |
+| 1 | `mint` | count u8 (1..=10) | minter WS, collection W, creator W, system | Grows the account, takes `rent_min(new_len) − lamports` and `mint_price * count` from the minter, writes the slots. At `minted == max_supply` it records `close_slot` and closes the mint. |
 | 2 | `transfer` | id u16 | owner S, collection W, new_owner | Sets `owner` and clears `price`. |
 | 3 | `list` | id u16, price u32 | owner S, collection W | Sets the price; `0` delists. |
 | 4 | `buy` | id u16, max_price u32 | buyer WS, collection W, seller W, treasury W, system | Requires `price > 0`, `owner == seller`, `price <= max_price`, `buyer != seller`. Pays the fee to the treasury and the rest to the seller, then sets `owner = buyer`, `price = 0`. |
-| 5 | `reveal` | secret [32] | creator S, collection W, SlotHashes | Requires `sha256(secret) == provenance` and stores the secret. If entropy is not set yet, records it and sets `max_supply = minted`, closing the mint. |
+| 5 | `close` | | creator S, collection W | Requires an open mint. Sets `max_supply = minted`, records `close_slot`, closes the mint. |
 | 6 | `withdraw_excess` | | creator WS, collection W | Moves `lamports − rent_min(len)` to the creator. Needed after each rent cut. |
+| 7 | `settle` | | collection W, SlotHashes | Requires a closed, unsettled mint and a slot past `close_slot + 32`. Writes that slot's hash (or the next produced one) as `entropy`; re-arms if it has left SlotHashes. |
 
-Every instruction checks that the collection is owned by the program with the right `tag` and `version`; that `creator` and `treasury` match the header; that the SlotHashes address is the sysvar; signers and writability; `id < minted`. Arithmetic is checked. Each failure has its own `Custom(code)`, 1 to 17, listed in `program/src/error.rs` and exported by the SDK as `ERR`.
+Every instruction checks that the collection is owned by the program with the right `tag` and `version`; that `creator` and `treasury` match the header; that the SlotHashes address is the sysvar; signers and writability; `id < minted`. Arithmetic is checked. Each failure has its own `Custom(code)`, 1 to 18, listed in `program/src/error.rs` and exported by the SDK as `ERR`.
 
-Events are logged for the site's history: `mint <first_id> <count>`, `list <id> <price>`, `buy <id> <price> <buyer>`, `xfer <id> <to>`, `reveal`.
+Events are logged for the site's history: `mint <first_id> <count>`, `list <id> <price>`, `buy <id> <price> <buyer>`, `xfer <id> <to>`, `close <minted>`, `settle`, `rearm`.
 
 There are no royalties: they would cost an extra CPI and account in `buy`, and free `transfer` would route around them anyway. The platform fee is configurable, and `fee_bps = 0` turns it off. Bids and offers, mint pausing and allowlists are not in v1.
 
@@ -78,15 +80,15 @@ Rent is read from the `Rent` sysvar at the time of each operation. Under SIMD-04
 | Collection header (creator) | ≈ 0.0018 SOL | ≈ 0.00025 SOL |
 | One token, 36 bytes (minter) | 182,880 lamports ≈ 0.00018 SOL | 25,056 lamports |
 | 5,000 tokens | ≈ 0.92 SOL, paid by minters | ≈ 0.126 SOL |
-| Program, 21.6 KB | ≈ 0.11 SOL, refundable | ≈ 0.015 SOL |
+| Program, 21.8 KB | ≈ 0.11 SOL, refundable | ≈ 0.015 SOL |
 
 Measured, instructions cost between about 400 compute units (`transfer`) and 3,300 (`init`, `mint` of 10).
 
 ## 4. GENLOSS generator
 
-[`collections/genloss/generator/genloss-gen.js`](collections/genloss/generator/genloss-gen.js), version `genloss-gen/4`: abstract compositions destroyed by simulated JPEG. One dependency-free ES module that runs in Node and browsers. Its sha256 is the collection's `generator_hash`.
+[`collections/genloss/generator/genloss-gen.js`](collections/genloss/generator/genloss-gen.js), version `genloss-gen/5`: abstract compositions destroyed by simulated JPEG. One dependency-free ES module that runs in Node and browsers. Its sha256 is the collection's `generator_hash`.
 
-- **API.** `generate(seed, onStage?)` returns `{ size, rgb, traits }` with a 256×256×3 RGB buffer; `onStage` sees every JPEG generation. `traits(seed)` computes traits without rendering. `artSeed(...)` and `previewSeed(id)` build seeds.
+- **API.** `generate(seed, onStage?)` returns `{ size, rgb, traits }` with a 256×256×3 RGB buffer; `onStage` sees every JPEG generation. `traits(seed)` computes traits without rendering. `artSeed(collection, entropy, id)` and `previewSeed(id)` build seeds.
 - **Canonical output** is `sha256(rgb)`. PNGs made through a canvas are for display only.
 - **Pipeline.** The composition is drawn at 512×512. With an overlay, a second composition is blended in by `|a − b|` or `a ^ b`. The result is box-filtered to 256×256, then optionally "fried", then put through N JPEG generations. Some generations re-upload: downscale 2–3×, JPEG, bilinear upscale. Datamosh lands mid-way so later generations re-compress its edges.
 - **JPEG.** The lossy part of JPEG is reproduced exactly: integer RGB → YCbCr as in libjpeg, chroma subsampling, 8×8 DCT with a literal matrix, quantisation with the Annex K tables and libjpeg quality scaling, inverse DCT. Entropy coding is lossless and skipped.
@@ -122,7 +124,7 @@ Measured, instructions cost between about 400 compute units (`transfer`) and 3,3
 - **Wallets.** Any Wallet Standard wallet: kit builds the transaction and the wallet signs and sends it through its own RPC (`solana:signAndSendTransaction`), so the site's RPC only reads and stays clear of the provider's `sendTransaction` limit. A wallet without that feature signs (`solana:signTransaction`) and the page sends.
 - **Data.** No indexer: the whole collection is one `getAccountInfo`, polled every 12 seconds and after each transaction.
 - **Art integrity.** The generator is not bundled. It is served byte for byte from `public/gen/genloss-gen.js` (copied by `predev` and `prebuild`), hashed by the page, compared with the collection's `generator_hash`, and the result is shown in the footer. Rendering runs in a pool of Web Workers.
-- **Collections.** The site reads `@gl-36/deployments` and keeps only collections whose `project` is `genloss`. With none recorded yet, the mint panel and the gallery say the mint hasn't opened.
+- **Collections.** The site reads `@gl-36/deployments` and keeps only collections whose `project` is `genloss`. With none recorded yet, the mint panel and the gallery say the mint hasn't opened. Once a collection is closed but not settled, the mint panel offers "Reveal the art", which sends `settle` from the connected wallet.
 - **Design language,** derived from JPEG:
   - warm ink (#ebe7e0) on black; only the art is in full colour. The Cb/Cr pair (blue #3d5afe, red #ff4930) appears only in motion: hover, focus and the hero;
   - Archivo Variable, its width axis used as "quality": headings sit at 68% width and resolve from a wider cut in 8 steps;
@@ -148,19 +150,19 @@ Measured, instructions cost between about 400 compute units (`transfer`) and 3,3
 ## 7. SDK (`packages/sdk/`)
 
 - **Package.** `@gl-36/sdk`, MIT, ESM with types, `@solana/kit` ^8.5 as the only (peer) dependency, `sideEffects: false`. Node 20.19+ and browsers.
-- **Contents.** `PROGRAM_ID` per cluster and layout constants with field offsets; `findCollection`; the seven instruction builders, which throw a `RangeError` for arguments the program would refuse; `decodeCollection`, `decodeHeader`, `decodeSlot`, `isCollectionAccount`, `collectionState`, `listedSlots`, `slotsOwnedBy`; RPC reads `fetchCollection`, `fetchHeader` and `fetchSlot` (via `dataSlice`), `findCollections` (`getProgramAccounts` with `memcmp` on tag, version and creator) and `getLamportsPerByte`; `parseLogs`, which only accepts lines from the GL-36 program's own invoke frames; `parseProgramError`, which reads kit errors, their causes, simulation logs or messages and does not mistake a System Program error for a GL-36 one; exact SOL ↔ price-unit conversions; `provenanceOf` and `tokenSeed` on WebCrypto.
+- **Contents.** `PROGRAM_ID` per cluster and layout constants with field offsets; `findCollection`; the eight instruction builders, which throw a `RangeError` for arguments the program would refuse; `decodeCollection`, `decodeHeader`, `decodeSlot`, `isCollectionAccount`, `collectionState`, `entropySlot`, `listedSlots`, `slotsOwnedBy`; RPC reads `fetchCollection`, `fetchHeader` and `fetchSlot` (via `dataSlice`), `findCollections` (`getProgramAccounts` with `memcmp` on tag, version and creator) and `getLamportsPerByte`; `parseLogs`, which only accepts lines from the GL-36 program's own invoke frames; `parseProgramError`, which reads kit errors, their causes, simulation logs or messages and does not mistake a System Program error for a GL-36 one; exact SOL ↔ price-unit conversions; `tokenSeed` on WebCrypto.
 - **Source and build.** Sources import each other with `.ts` extensions; `tsc` with `rewriteRelativeImportExtensions` emits `dist/` (JS, `.d.ts` and maps). The `exports` map has a `source` condition pointing at `src/index.ts`, so deploy scripts run from source with `node --conditions=source`, while the sites alias the source directly in Vite and TypeScript and dedupe kit.
 - **Tests.** `npm test` at the root: unit tests (byte layouts, builders and validation, decoding, logs, errors, prices, PDA, seeds checked against the GENLOSS generator) and the LiteSVM suite against `program/target/deploy/gl36.so`, skipped when the program isn't built. `prepack` runs typecheck, tests and build; the tarball is about 21 kB.
 - **Workspace.** The root `package.json` is one npm workspace for `packages/*`, `deployments`, `tools/*`, `docs` and `collections/*`, with one lockfile and one copy of kit and Astro.
 - **Release.** 0.x tracks the mainnet program. Publishing needs the `gl36` npm organisation; `publishConfig` asks for public access and provenance.
 
-- **Agent skill.** `skills/gl36/SKILL.md` (skills.sh layout) teaches coding agents to integrate GL-36 through the SDK: the account model, reads, transactions, price units, the `buy` guard, errors, logs, content and reveal; `references/protocol.md` has the byte layout, instruction layouts and errors, `references/launch.md` the launch walkthrough. Every TypeScript example in it is type-checked against the published SDK types, and the read examples were run against a live cluster. The docs site serves the same folder at `/.well-known/agent-skills/` (discovery schema 0.2.0: an `index.json` and a reproducible `gl36.tar.gz` with its sha256), so `npx skills add https://gl36.org` installs it without a Git host, and the landing page and Quickstart offer a copy-paste prompt that has an agent install the skill and the SDK.
+- **Agent skill.** `skills/gl36/SKILL.md` (skills.sh layout) teaches coding agents to integrate GL-36 through the SDK: the account model, reads, transactions, price units, the `buy` guard, errors, logs, content, close and settle; `references/protocol.md` has the byte layout, instruction layouts and errors, `references/launch.md` the launch walkthrough. Every TypeScript example in it is type-checked against the published SDK types, and the read examples were run against a live cluster. The docs site serves the same folder at `/.well-known/agent-skills/` (discovery schema 0.2.0: an `index.json` and a reproducible `gl36.tar.gz` with its sha256), so `npx skills add https://gl36.org` installs it without a Git host, and the landing page and Quickstart offer a copy-paste prompt that has an agent install the skill and the SDK.
 
 ## 8. Projects and deployments
 
 - **Layout.** Shared: `program/`, `packages/sdk/` (`@gl-36/sdk`), `docs/`, `deployments/` (`@gl-36/deployments`), `tools/cluster/` (`@gl-36/cluster`: keys, RPC and send-and-confirm helpers). Per mint: `collections/<name>/`, one workspace package named after the project, holding its generator, its site (`site/`, run with `astro --root site`), its deploy script and tests.
 - **Registry.** `deployments/mainnet.json` has `cluster`, `rpc`, `programId`, `projects` (title, site and generator hash per project) and `collections` (id, project, title, address, supply, mint price). A project's deploy script rewrites only its own entries and keeps the rest.
-- **GENLOSS deploy.** `collections/genloss/scripts/launch.ts` (`npm run launch -w genloss`) creates Genesis (5,000 supply, 0.01 SOL mint, unrevealed) if it doesn't exist, funds the treasury up to the rent-exempt minimum so that small sales can pay their fee, and records the collection in the registry. It keeps the registry's public RPC, so a private `RPC_URL` never lands in the repository. Collection nonces are derived from the generator's hash, so after a generator change a new run creates a collection whose `generator_hash` matches.
+- **GENLOSS deploy.** `collections/genloss/scripts/launch.ts` (`npm run launch -w genloss`) creates Genesis (5,000 supply, 0.01 SOL mint) if it doesn't exist, funds the treasury up to the rent-exempt minimum so that small sales can pay their fee, and records the collection in the registry. It keeps the registry's public RPC, so a private `RPC_URL` never lands in the repository. Collection nonces are derived from the generator's hash, so after a generator change a new run creates a collection whose `generator_hash` matches.
 
 ## Sources
 

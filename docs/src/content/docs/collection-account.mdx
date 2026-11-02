@@ -41,18 +41,18 @@ All integers are little-endian. Point at a field to find it in the byte map.
 | 0 | 1 | `tag` | u8 | Always `0x01`: marks a collection account. |
 | 1 | 1 | `version` | u8 | Layout version, currently `1`. |
 | 2 | 1 | `bump` | u8 | Bump of the collection PDA. |
-| 3 | 1 | `flags` | u8 | Bit 0 revealed, bit 1 closed. |
-| 4 | 2 | `max_supply` | u16 | Lowered to `minted` when `reveal` closes the mint. |
+| 3 | 1 | `flags` | u8 | Bit 0 settled, bit 1 closed. |
+| 4 | 2 | `max_supply` | u16 | Lowered to `minted` when the creator closes the mint early. |
 | 6 | 2 | `minted` | u16 | Number of slots after the header. |
 | 8 | 2 | `fee_bps` | u16 | Market fee in basis points, at most 1,000 (10%). |
 | 10 | 2 | — | | Reserved, zero. |
 | 12 | 4 | `nonce` | u32 | Third PDA seed. |
 | 16 | 8 | `mint_price` | u64 | Lamports per token, paid to the creator. May be 0. |
-| 24 | 32 | `creator` | Address | Receives mint proceeds; the only signer of `reveal` and `withdraw_excess`. |
+| 24 | 32 | `creator` | Address | Receives mint proceeds; the only signer of `close` and `withdraw_excess`. |
 | 56 | 32 | `treasury` | Address | Receives the market fee. |
-| 88 | 32 | `provenance` | [u8; 32] | `sha256(secret)`, fixed at `init`. |
-| 120 | 32 | `secret` | [u8; 32] | Zero until `reveal`. |
-| 152 | 32 | `entropy` | [u8; 32] | Latest `SlotHashes` entry when the mint closes. |
+| 88 | 8 | `close_slot` | u64 | Slot in which the mint closed, or was re-armed. Zero while open. |
+| 96 | 56 | — | | Reserved, zero. |
+| 152 | 32 | `entropy` | [u8; 32] | Hash of the first slot at or after `close_slot + 32`. Zero until `settle`. |
 | 184 | 32 | `generator_hash` | [u8; 32] | sha256 of the generator bundle. |
 | 216 | 8 | — | | Reserved, zero. |
 
@@ -60,8 +60,8 @@ All integers are little-endian. Point at a field to find it in the byte map.
 
 | Bit | Name | Set by | Meaning |
 | ---: | --- | --- | --- |
-| 0 | `REVEALED` | `reveal` | `secret` is public; token content can be computed. |
-| 1 | `CLOSED` | last `mint` or `reveal` | `entropy` is set; no more tokens can be minted. |
+| 0 | `SETTLED` | `settle` | `entropy` is set; token content can be computed. |
+| 1 | `CLOSED` | last `mint` or `close` | `close_slot` is set; no more tokens can be minted. |
 
 A collection moves through three states, never backwards:
 
@@ -69,9 +69,9 @@ A collection moves through three states, never backwards:
 | --- | --- | --- | --- |
 | Open | `0b00` | yes | yes |
 | Closed | `0b10` | no | yes |
-| Revealed | `0b11` | no | yes |
+| Settled | `0b11` | no | yes |
 
-Selling out closes the mint and sets the entropy. `reveal` on an open collection closes it at the current supply in the same step.
+Selling out closes the mint; so does `close`, at the current supply. `settle` then takes the entropy from a slot that didn't exist yet when the mint closed. See [Provenance and entropy](/docs/provenance/).
 
 ## Slots
 

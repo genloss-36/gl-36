@@ -28,8 +28,9 @@ pub fn process_instruction(
         2 => ix::transfer(program_id, accounts, args),
         3 => ix::list(program_id, accounts, args),
         4 => ix::buy(program_id, accounts, args),
-        5 => ix::reveal(program_id, accounts, args),
+        5 => ix::close(program_id, accounts, args),
         6 => ix::withdraw_excess(program_id, accounts, args),
+        7 => ix::settle(program_id, accounts, args),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }

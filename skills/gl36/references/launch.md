@@ -1,6 +1,6 @@
 # Launching a GL-36 collection
 
-A collection is created by one `init` and nothing in it can be edited afterwards: supply (can only shrink, at reveal), mint price, market fee, treasury, the generator hash and the commitment to a secret. Walk the user through each decision before sending `init`, and simulate every transaction before sending it.
+A collection is created by one `init` and nothing in it can be edited afterwards: supply (can only shrink, when the creator closes early), mint price, market fee, treasury and the generator hash. Walk the user through each decision before sending `init`, and simulate every transaction before sending it.
 
 ## 1. Freeze the generator
 
@@ -15,19 +15,7 @@ const generatorHash = createHash("sha256").update(readFileSync("generator.js")).
 
 To be verifiable a generator must be deterministic on every machine: no `Math.random`, time, network, fonts or `Intl`; no floating-point functions whose results differ between engines (`Math.sin`, `cos`, `exp`, `pow`, `log`, `sqrt`), use tables and integer math instead; no canvas or GPU in the computation, only to display finished pixels. Define a canonical output (for images, sha256 of the raw pixels) and publish test vectors for a few ids. Pick a seed domain such as `"myproject/v1"` and document it: front ends compute seeds with `tokenSeed({ domain, … })`.
 
-## 2. Commit to a secret
-
-```ts
-import { randomBytes } from "node:crypto";
-import { provenanceOf } from "@gl-36/sdk";
-
-const secret = new Uint8Array(randomBytes(32));
-const provenance = await provenanceOf(secret);
-```
-
-Store `secret` offline, like a private key. It is needed once, for `reveal`, and the program accepts only its exact preimage: if it is lost the collection can never be revealed; if it leaks before the mint closes, anyone can compute content in advance and pick tokens.
-
-## 3. Choose the parameters
+## 2. Choose the parameters
 
 | Parameter | Notes |
 | --- | --- |
@@ -37,7 +25,7 @@ Store `secret` offline, like a private key. It is needed once, for `reveal`, and
 | `feeBps` | 0–1,000. Market fee on every sale, paid to `treasury`. There are no royalties. |
 | `treasury` | Receives the fee; can be the creator's own address. Fund it with the rent-exempt minimum for an empty account (`getMinimumBalanceForRentExemption(0)`) before the first sale: until it holds that much, a sale whose fee is smaller fails with `InsufficientFundsForRent`. |
 
-## 4. Initialize
+## 3. Initialize
 
 ```ts
 import { PROGRAM_ID, findCollection, initIx } from "@gl-36/sdk";
@@ -52,31 +40,36 @@ await send(creator, [
     maxSupply: 5_000,
     feeBps: 200,
     mintPrice: 10_000_000n,
-    provenance,
     generatorHash,
   }),
 ]);
 ```
 
-`init` creates the 224-byte header; the creator pays its rent (about 0.0018 SOL at 5,080 lamports per byte) and the network fee. If an account already exists at that address, pick another nonce.
+`init` creates the 224-byte header; the creator pays its rent (about 0.0018 SOL at 5,080 lamports per byte) and the network fee. Lamports someone sent to the address beforehand don't block it; `init` fails only if a collection already lives there, and then you pick another nonce.
 
-## 5. Mint
+## 4. Mint
 
-The mint opens as soon as `init` lands. Anyone can call `mint` with 1–10 tokens per instruction. Front ends should show placeholders until reveal.
+The mint opens as soon as `init` lands. Anyone can call `mint` with 1–10 tokens per instruction. Front ends should show placeholders until the collection is settled.
 
-## 6. Close and reveal
+## 5. Close and settle
 
-The mint closes by itself when the last token is minted. To end it early, call `reveal` while it is still open: that closes it at the current supply and reveals in the same step.
+The mint closes by itself when the last token is minted. To end it early, the creator calls `close`, which stops supply at the tokens minted so far:
 
 ```ts
-import { revealIx } from "@gl-36/sdk";
+import { closeIx, settleIx } from "@gl-36/sdk";
 
-await send(creator, [revealIx(program, creator, collection, secret)]);
+await send(creator, [closeIx(program, creator, collection)]);
 ```
 
-The entropy is the latest slot hash at the moment the mint closes, unknown to the creator when they committed to the secret, so neither collectors nor the creator can steer content to chosen ids.
+At least 32 slots (about 13 seconds) after the close, anyone sends `settle`. It takes the hash of the first slot at or after `close_slot + 32` as the entropy; from then on every token's content can be computed.
 
-## 7. Withdraw surplus rent
+```ts
+await send(anyone, [settleIx(program, collection)]);
+```
+
+When the mint closes, that slot doesn't exist yet, so neither the last minter nor the creator can steer content to chosen ids, and there is no secret to keep. If nobody settles within about three minutes, the target slot leaves SlotHashes and `settle` re-arms (logs `rearm`); send it again 32 slots later. Have the front end or the launch script settle right after the close.
+
+## 6. Withdraw surplus rent
 
 Rent is read from the cluster at each operation. When Solana lowers it (SIMD-0437 steps from 5,080 down to 696 lamports per byte), the account holds more than it needs and the creator can take the difference out at any time:
 
@@ -90,4 +83,4 @@ Tell the creator that this surplus includes rent minters paid for their slots, a
 
 ## Checklist before `init`
 
-Generator final and hashed; secret generated and stored offline; nonce unused; treasury address correct and funded; fee and price as intended; every transaction simulated first.
+Generator final and hashed; nonce unused; treasury address correct and funded; fee and price as intended; a plan for who sends `settle`; every transaction simulated first.

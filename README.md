@@ -30,15 +30,16 @@ A collection is a PDA at `["col", creator, nonce_u32_le]`. It starts as a 224-by
 
 | Instruction | What it does |
 |---|---|
-| `init` | Creates the collection: supply, mint price, platform fee, provenance hash, generator hash |
+| `init` | Creates the collection: supply, mint price, platform fee, generator hash |
 | `mint` | Mints 1 to 10 tokens, growing the account and paying the creator |
 | `transfer` | Moves a token and clears its listing |
 | `list` | Sets or clears a price |
 | `buy` | Pays the seller and the platform fee, then moves the token |
-| `reveal` | Publishes the creator's secret; closes the mint if it is still open |
+| `close` | Ends the mint early at the current supply |
 | `withdraw_excess` | Returns rent above the minimum to the creator after a rent cut |
+| `settle` | Takes the hash of a slot 32 slots after the close as the entropy; anyone can call it |
 
-A token's content comes from a generator whose hash the collection pins at `init`, run on the seed `sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id)`. The creator commits to `secret` before minting, and `entropy` comes from SlotHashes when the mint closes, so nobody can pick tokens in advance. There are no royalties.
+A token's content comes from a generator whose hash the collection pins at `init`, run on the seed `sha256(domain ‖ collection ‖ entropy ‖ id)`. `entropy` is the hash of a slot produced after the mint closes, so nobody, the creator included, can pick tokens in advance, and there is no secret to keep. There are no royalties.
 
 ## Getting started
 
@@ -52,7 +53,7 @@ cd program && cargo build-sbf
 npm install && npm test
 ```
 
-`npm test` runs the SDK's tests (byte layouts, builders, log and error parsing, prices and seeds, then the LiteSVM suite against `program/target/deploy/gl36.so`: normal flows and attacks such as stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, a deposit sent to the collection address before `init`, an overflowing mint price, wrong reveal secrets, and withdrawals by anyone but the creator) and each collection's own tests. Without a built program the LiteSVM part is skipped.
+`npm test` runs the SDK's tests (byte layouts, builders, log and error parsing, prices and seeds, then the LiteSVM suite against `program/target/deploy/gl36.so`: normal flows and attacks such as stale prices, wrong sellers, creators or treasuries, missing signatures, a foreign account passed as the collection, a deposit sent to the collection address before `init`, an overflowing mint price, settling too early, twice or after the target slot has left SlotHashes, and withdrawals by anyone but the creator) and each collection's own tests. Without a built program the LiteSVM part is skipped.
 
 | Command | Does |
 |---|---|
@@ -69,7 +70,7 @@ To deploy your own copy, put keypairs in `.keys/` (`deployer.json` and `treasury
 
 ## Agent skill
 
-[`skills/gl36`](skills/gl36/SKILL.md) gives a coding agent what it needs to build on GL-36 correctly: the account model, the SDK calls for reading, minting, listing, buying and transferring, price units, the stale-listing guard in `buy`, error and log parsing, reveal, and a launch walkthrough, with the byte layout in `references/`. gl36.org serves it as a [well-known agent skill](https://skills.sh), so one command installs it into any project:
+[`skills/gl36`](skills/gl36/SKILL.md) gives a coding agent what it needs to build on GL-36 correctly: the account model, the SDK calls for reading, minting, listing, buying and transferring, price units, the stale-listing guard in `buy`, error and log parsing, closing and settling, and a launch walkthrough, with the byte layout in `references/`. gl36.org serves it as a [well-known agent skill](https://skills.sh), so one command installs it into any project:
 
 ```bash
 npx skills add https://gl36.org

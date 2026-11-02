@@ -8,6 +8,6 @@ Please report vulnerabilities privately through GitHub's **Report a vulnerabilit
 
 ## Scope
 
-- `program/`: account validation, arithmetic, lamport movements, the commit-reveal scheme.
+- `program/`: account validation, arithmetic, lamport movements, how `close` and `settle` take the entropy from SlotHashes.
 - `collections/genloss/generator/genloss-gen.js`: any input that renders differently across engines or runs, since every viewer must see the same art for a seed.
 - `web/` and `docs/`: transaction building and signing, and anything that could make a wallet sign something other than what the page shows.

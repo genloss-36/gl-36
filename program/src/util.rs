@@ -1,6 +1,6 @@
 use pinocchio::{
     error::ProgramError,
-    sysvars::{rent::Rent, Sysvar},
+    sysvars::{clock::Clock, rent::Rent, Sysvar},
     AccountView, Address, ProgramResult,
 };
 
@@ -52,30 +52,50 @@ pub fn rent_min(len: usize) -> Result<u64, ProgramError> {
     Rent::get()?.try_minimum_balance(len)
 }
 
-pub fn sha256(parts: &[&[u8]]) -> [u8; 32] {
-    let mut out = [0u8; 32];
-    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-    unsafe {
-        pinocchio::syscalls::sol_sha256(
-            parts.as_ptr() as *const u8,
-            parts.len() as u64,
-            out.as_mut_ptr(),
-        );
-    }
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-    let _ = parts;
-    out
+#[inline(always)]
+pub fn current_slot() -> Result<u64, ProgramError> {
+    Ok(Clock::get()?.slot)
 }
 
-pub fn latest_slot_hash(sysvar: &AccountView) -> Result<[u8; 32], ProgramError> {
+pub enum SlotHash {
+    Found([u8; 32]),
+    NotYet,
+    Gone,
+}
+
+const SLOT_HASHES_CAP: usize = 512;
+const SLOT_HASH_ENTRY: usize = 40;
+
+pub fn slot_hash_from(sysvar: &AccountView, target: u64) -> Result<SlotHash, ProgramError> {
     if sysvar.address() != &SLOT_HASHES_ID {
         return Err(Error::BadSysvar.into());
     }
     let d = sysvar.try_borrow()?;
-    if d.len() < 48 || read_u64(&d, 0) == 0 {
+    if d.len() < 8 {
         return Err(Error::BadSysvar.into());
     }
-    let mut h = [0u8; 32];
-    h.copy_from_slice(&d[16..48]);
-    Ok(h)
+    let n = read_u64(&d, 0) as usize;
+    if d.len() < 8 + n * SLOT_HASH_ENTRY {
+        return Err(Error::BadSysvar.into());
+    }
+    let mut found = None;
+    let mut bounded = false;
+    for i in 0..n {
+        let off = 8 + i * SLOT_HASH_ENTRY;
+        if read_u64(&d, off) >= target {
+            found = Some(off + 8);
+        } else {
+            bounded = true;
+            break;
+        }
+    }
+    Ok(match found {
+        None => SlotHash::NotYet,
+        Some(_) if !bounded && n >= SLOT_HASHES_CAP => SlotHash::Gone,
+        Some(off) => {
+            let mut h = [0u8; 32];
+            h.copy_from_slice(&d[off..off + 32]);
+            SlotHash::Found(h)
+        }
+    })
 }

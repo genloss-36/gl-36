@@ -11,7 +11,7 @@ Mint site: [genloss.gl36.org](https://genloss.gl36.org)
 | [`scripts/launch.ts`](scripts/launch.ts) | Creates the Genesis collection and records it in `deployments/mainnet.json` |
 | [`test/`](test) | Checks that the generator's seeds match `@gl-36/sdk` and that the registry pins this generator's hash |
 
-The seed of piece `id` is `sha256("genloss/v1" ‖ collection ‖ secret ‖ entropy ‖ id_u16_le)`, the SDK's `tokenSeed` with the `genloss/v1` domain.
+The seed of piece `id` is `sha256("genloss/v1" ‖ collection ‖ entropy ‖ id_u16_le)`, the SDK's `tokenSeed` with the `genloss/v1` domain.
 
 ## Commands
 

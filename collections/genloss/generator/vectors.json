@@ -1,5 +1,5 @@
 {
-  "version": "genloss-gen/4",
+  "version": "genloss-gen/5",
   "seed": "previewSeed(id)",
   "hash": "sha256(rgb)",
   "vectors": [

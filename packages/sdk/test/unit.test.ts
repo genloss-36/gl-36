@@ -13,7 +13,7 @@ import {
 import {
   ERR,
   FLAG_CLOSED,
-  FLAG_REVEALED,
+  FLAG_SETTLED,
   HEADER_LEN,
   HEADER_OFFSET,
   INSTRUCTION,
@@ -23,10 +23,12 @@ import {
   SYSTEM_PROGRAM,
   accountLength,
   buyIx,
+  closeIx,
   collectionState,
   decodeCollection,
   decodeHeader,
   decodeSlot,
+  entropySlot,
   errorName,
   findCollection,
   initIx,
@@ -39,9 +41,8 @@ import {
   parseProgramError,
   priceToLamports,
   priceToSol,
-  provenanceOf,
   rentExemptMinimum,
-  revealIx,
+  settleIx,
   slotOffset,
   slotsOwnedBy,
   solToPrice,
@@ -78,7 +79,8 @@ async function account(f: Fixture) {
   v.setBigUint64(16, 10_000_000n, true);
   d.set(enc.encode(creator), 24);
   d.set(enc.encode(treasury), 56);
-  d.fill(0xaa, 88, 120);
+  v.setBigUint64(88, 123_456_789n, true);
+  d.fill(0xcc, 152, 184);
   d.fill(0xbb, 184, 216);
   for (let id = 0; id < f.minted; id++) {
     const o = slotOffset(id);
@@ -102,8 +104,9 @@ describe("account", () => {
     assert.equal(col.mintPrice, 10_000_000n);
     assert.equal(col.creator, creator);
     assert.equal(col.treasury, treasury);
-    assert.equal(hex(col.provenance), "aa".repeat(32));
-    assert.equal(hex(col.secret), "00".repeat(32));
+    assert.equal(col.closeSlot, 123_456_789n);
+    assert.equal(entropySlot(col), 123_456_821n);
+    assert.equal(hex(col.entropy), "cc".repeat(32));
     assert.equal(hex(col.generatorHash), "bb".repeat(32));
     assert.deepEqual(col.slots, [
       { id: 0, owner: a, price: 0 },
@@ -138,7 +141,7 @@ describe("account", () => {
     assert.equal(HEADER_OFFSET.generatorHash + 32, 216);
     assert.equal(collectionState({ flags: 0 }), "open");
     assert.equal(collectionState({ flags: FLAG_CLOSED }), "closed");
-    assert.equal(collectionState({ flags: FLAG_CLOSED | FLAG_REVEALED }), "revealed");
+    assert.equal(collectionState({ flags: FLAG_CLOSED | FLAG_SETTLED }), "settled");
     assert.equal(rentExemptMinimum(36, 5_080n), 164n * 5_080n);
   });
 });
@@ -148,40 +151,44 @@ describe("instructions", () => {
     const creator = await generateKeyPairSigner();
     const other = (await generateKeyPairSigner()).address;
     const collection = (await generateKeyPairSigner()).address;
-    const provenance = new Uint8Array(32).fill(1);
     const generatorHash = new Uint8Array(32).fill(2);
 
-    const init = initIx(PROGRAM, creator, collection, other, { nonce: 0x01020304, maxSupply: 5000, feeBps: 200, mintPrice: 10_000_000n, provenance, generatorHash });
-    assert.equal(init.data?.length, 81);
+    const init = initIx(PROGRAM, creator, collection, other, { nonce: 0x01020304, maxSupply: 5000, feeBps: 200, mintPrice: 10_000_000n, generatorHash });
+    assert.equal(init.data?.length, 49);
+    assert.equal(hex(init.data!.subarray(17)), "02".repeat(32));
     assert.equal(hex(init.data!.subarray(0, 17)), "00" + "04030201" + "8813" + "c800" + "8096980000000000");
     assert.deepEqual(init.accounts?.map((a) => a.role), [AccountRole.WRITABLE_SIGNER, AccountRole.WRITABLE, AccountRole.READONLY, AccountRole.READONLY]);
     assert.equal(init.accounts?.[3].address, SYSTEM_PROGRAM);
 
     const mint = mintIx(PROGRAM, creator, collection, other, 10);
     assert.equal(hex(mint.data!), "010a");
-    assert.deepEqual(mint.accounts?.map((a) => a.address), [creator.address, collection, other, SLOT_HASHES, SYSTEM_PROGRAM]);
+    assert.deepEqual(mint.accounts?.map((a) => a.address), [creator.address, collection, other, SYSTEM_PROGRAM]);
 
     assert.equal(hex(transferIx(PROGRAM, creator, collection, other, 258).data!), "020201");
     assert.equal(hex(listIx(PROGRAM, creator, collection, 7, 250_000).data!), "030700" + "90d00300");
     assert.equal(hex(buyIx(PROGRAM, creator, collection, other, other, 7, 250_000).data!), "040700" + "90d00300");
-    assert.equal(hex(revealIx(PROGRAM, creator, collection, provenance).data!), "05" + "01".repeat(32));
+    const close = closeIx(PROGRAM, creator, collection);
+    assert.equal(hex(close.data!), "05");
+    assert.deepEqual(close.accounts?.map((a) => a.role), [AccountRole.READONLY_SIGNER, AccountRole.WRITABLE]);
     assert.equal(hex(withdrawExcessIx(PROGRAM, creator, collection).data!), "06");
+    const settle = settleIx(PROGRAM, collection);
+    assert.equal(hex(settle.data!), "07");
+    assert.deepEqual(settle.accounts?.map((a) => [a.address, a.role]), [[collection, AccountRole.WRITABLE], [SLOT_HASHES, AccountRole.READONLY]]);
     assert.equal(INSTRUCTION.withdrawExcess, 6);
   });
 
   test("reject arguments the program would refuse", async () => {
     const s = await generateKeyPairSigner();
     const c = s.address;
-    const base = { nonce: 0, maxSupply: 10, feeBps: 0, mintPrice: 0n, provenance: new Uint8Array(32), generatorHash: new Uint8Array(32) };
+    const base = { nonce: 0, maxSupply: 10, feeBps: 0, mintPrice: 0n, generatorHash: new Uint8Array(32) };
     assert.throws(() => initIx(PROGRAM, s, c, c, { ...base, feeBps: 1001 }), RangeError);
     assert.throws(() => initIx(PROGRAM, s, c, c, { ...base, maxSupply: 0 }), RangeError);
-    assert.throws(() => initIx(PROGRAM, s, c, c, { ...base, provenance: new Uint8Array(31) }), RangeError);
+    assert.throws(() => initIx(PROGRAM, s, c, c, { ...base, generatorHash: new Uint8Array(31) }), RangeError);
     assert.throws(() => mintIx(PROGRAM, s, c, c, 0), RangeError);
     assert.throws(() => mintIx(PROGRAM, s, c, c, 11), RangeError);
     assert.throws(() => listIx(PROGRAM, s, c, 0, 2 ** 32), RangeError);
     assert.throws(() => buyIx(PROGRAM, s, c, c, c, 0, 0), RangeError);
     assert.throws(() => transferIx(PROGRAM, s, c, c, 1.5), RangeError);
-    assert.throws(() => revealIx(PROGRAM, s, c, new Uint8Array(16)), RangeError);
   });
 });
 
@@ -230,7 +237,9 @@ describe("logs", () => {
       "Program log: withdraw 18446744073709551615",
       "Program log: xfer 4",
       "Program log: list 4 0",
-      "Program log: reveal",
+      "Program log: close 40",
+      "Program log: rearm",
+      "Program log: settle",
       "Program log: init 5000",
       "Program log: something else 1",
       `Program ${PROGRAM} success`,
@@ -242,7 +251,9 @@ describe("logs", () => {
       { type: "withdraw", lamports: 18446744073709551615n },
       { type: "transfer", id: 4 },
       { type: "list", id: 4, price: 0 },
-      { type: "reveal" },
+      { type: "close", minted: 40 },
+      { type: "rearm" },
+      { type: "settle" },
       { type: "init", maxSupply: 5000 },
     ]);
   });
@@ -277,22 +288,17 @@ describe("errors", () => {
 });
 
 describe("seed", () => {
-  test("is sha256(domain ‖ collection ‖ secret ‖ entropy ‖ id)", async () => {
+  test("is sha256(domain ‖ collection ‖ entropy ‖ id)", async () => {
     const collection = (await generateKeyPairSigner()).address;
-    const secret = new Uint8Array(32).fill(3);
     const entropy = new Uint8Array(32).fill(4);
-    const seed = await tokenSeed({ domain: "genloss/v1", collection, secret, entropy, id: 300 });
+    const seed = await tokenSeed({ domain: "genloss/v1", collection, entropy, id: 300 });
     const expected = createHash("sha256")
       .update("genloss/v1")
       .update(new Uint8Array(enc.encode(collection)))
-      .update(secret)
       .update(entropy)
       .update(Buffer.from([300 & 0xff, 300 >> 8]))
       .digest();
     assert.equal(hex(seed), expected.toString("hex"));
 
-
-    assert.equal(hex(await provenanceOf(secret)), createHash("sha256").update(secret).digest("hex"));
-    await assert.rejects(async () => provenanceOf(new Uint8Array(3)), RangeError);
   });
 });

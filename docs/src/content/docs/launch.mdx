@@ -1,11 +1,11 @@
 ---
 title: Launch a collection
-description: From a generator to a revealed collection on chain — the steps and the decisions a creator makes once.
+description: From a generator to a settled collection on chain — the steps and the decisions a creator makes once.
 ---
 
 import Note from "../../components/Note.astro";
 
-A launch is one `init` transaction. Everything a collection is — supply, price, fee, payout addresses, the generator and the commitment to the secret — is fixed there and can't be changed afterwards.
+A launch is one `init` transaction. Everything a collection is — supply, price, fee, payout addresses and the generator — is fixed there and can't be changed afterwards.
 
 ## 1. Fix the generator
 
@@ -18,28 +18,17 @@ import { readFileSync } from "node:fs";
 const generatorHash = createHash("sha256").update(readFileSync("generator.js")).digest();
 ```
 
-## 2. Commit to a secret
-
-```ts
-import { randomBytes } from "node:crypto";
-
-const secret = randomBytes(32);
-const provenance = createHash("sha256").update(secret).digest();
-```
-
-Store `secret` offline. It is needed once, for `reveal`, and nothing can recover it.
-
-## 3. Choose parameters
+## 2. Choose parameters
 
 | Parameter | Type | Notes |
 | --- | --- | --- |
 | `nonce` | u32 | Any value not used before by this creator. Part of the address. |
-| `maxSupply` | u16 | 1 to 65,535. Can only go down, at `reveal`. |
+| `maxSupply` | u16 | 1 to 65,535. Can only go down, when the creator closes the mint early. |
 | `mintPrice` | u64 | Lamports per token, paid to the creator. `0n` for a free mint. |
 | `feeBps` | u16 | 0 to 1,000. Market fee on every sale, paid to the treasury. |
 | `treasury` | Address | Receives the market fee. Can be the creator. |
 
-## 4. Initialize
+## 3. Initialize
 
 ```ts
 import { findCollection, initIx } from "@gl-36/sdk";
@@ -53,7 +42,6 @@ await send(creator, [
     maxSupply: 5_000,
     feeBps: 200,                // 2%
     mintPrice: 10_000_000n,     // 0.01 SOL
-    provenance,
     generatorHash,
   }),
 ]);
@@ -61,21 +49,27 @@ await send(creator, [
 
 `init` creates the account at 224 bytes. The creator pays its rent — about 0.0018 SOL at today's rate — and the network fee.
 
-## 5. Mint
+## 4. Mint
 
-The mint is open as soon as `init` lands. Anyone can call `mint` with 1 to 10 tokens per instruction; several `mint` instructions can share a transaction. Front ends show a placeholder until reveal.
+The mint is open as soon as `init` lands. Anyone can call `mint` with 1 to 10 tokens per instruction; several `mint` instructions can share a transaction. Front ends show a placeholder until the collection is settled.
 
-## 6. Close and reveal
+## 5. Close and settle
 
-The mint closes itself when the last token is minted. To end it early, call `reveal` while it is open: it closes the mint at the current supply and reveals in one step.
+The mint closes itself when the last token is minted. To end it early, the creator calls `close`: supply stops at the tokens minted so far.
 
 ```ts
-await send(creator, [revealIx(PROGRAM, creator, collection, secret)]);
+import { closeIx, settleIx } from "@gl-36/sdk";
+
+await send(creator, [closeIx(PROGRAM, creator, collection)]);
 ```
 
-After `reveal`, every token's seed — and so its content — can be computed by anyone.
+About 13 seconds later — 32 slots after the close — anyone can call `settle`. It takes the hash of that later slot as the entropy, and from then on every token's seed, and so its content, can be computed by anyone.
 
-## 7. Withdraw surplus rent
+```ts
+await send(anyone, [settleIx(PROGRAM, collection)]);
+```
+
+## 6. Withdraw surplus rent
 
 Whenever Solana lowers rent, call `withdraw_excess`. It is safe to call at any time.
 
@@ -84,5 +78,5 @@ await send(creator, [withdrawExcessIx(PROGRAM, creator, collection)]);
 ```
 
 <Note label="Checklist">
-  Generator final and hashed · secret stored offline · nonce unused · treasury address correct and funded with the rent-exempt minimum · fee and price as intended. None of these but the treasury's balance can be edited after <code>init</code>.
+  Generator final and hashed · nonce unused · treasury address correct and funded with the rent-exempt minimum · fee and price as intended. None of these but the treasury's balance can be edited after <code>init</code>.
 </Note>

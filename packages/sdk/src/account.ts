@@ -2,10 +2,11 @@ import { getAddressDecoder, type Address } from "@solana/kit";
 import {
   COLLECTION_TAG,
   FLAG_CLOSED,
-  FLAG_REVEALED,
+  FLAG_SETTLED,
   HEADER_LEN,
   HEADER_OFFSET as O,
   LAYOUT_VERSION,
+  SETTLE_DELAY,
   SLOT_LEN,
   SLOT_OFFSET,
 } from "./constants.ts";
@@ -26,8 +27,7 @@ export interface CollectionHeader {
   mintPrice: bigint;
   creator: Address;
   treasury: Address;
-  provenance: Uint8Array;
-  secret: Uint8Array;
+  closeSlot: bigint;
   entropy: Uint8Array;
   generatorHash: Uint8Array;
 }
@@ -36,7 +36,7 @@ export interface Collection extends CollectionHeader {
   slots: Slot[];
 }
 
-export type CollectionState = "open" | "closed" | "revealed";
+export type CollectionState = "open" | "closed" | "settled";
 
 export const accountLength = (minted: number) => HEADER_LEN + minted * SLOT_LEN;
 
@@ -66,8 +66,7 @@ export function decodeHeader(data: Uint8Array): CollectionHeader {
     mintPrice: v.getBigUint64(O.mintPrice, true),
     creator: key(data, O.creator),
     treasury: key(data, O.treasury),
-    provenance: data.slice(O.provenance, O.provenance + 32),
-    secret: data.slice(O.secret, O.secret + 32),
+    closeSlot: v.getBigUint64(O.closeSlot, true),
     entropy: data.slice(O.entropy, O.entropy + 32),
     generatorHash: data.slice(O.generatorHash, O.generatorHash + 32),
   };
@@ -96,10 +95,12 @@ export function decodeCollection(data: Uint8Array): Collection {
 }
 
 export function collectionState(c: Pick<CollectionHeader, "flags">): CollectionState {
-  if (c.flags & FLAG_REVEALED) return "revealed";
+  if (c.flags & FLAG_SETTLED) return "settled";
   if (c.flags & FLAG_CLOSED) return "closed";
   return "open";
 }
+
+export const entropySlot = (c: Pick<CollectionHeader, "closeSlot">): bigint => c.closeSlot + SETTLE_DELAY;
 
 export const listedSlots = (c: Pick<Collection, "slots">): Slot[] =>
   c.slots.filter((s) => s.price > 0).sort((a, b) => a.price - b.price || a.id - b.id);

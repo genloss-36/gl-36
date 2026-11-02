@@ -40,10 +40,8 @@ function value(name: string, c: Collection): string {
       return short(c.creator);
     case "treasury":
       return short(c.treasury);
-    case "provenance":
-      return bytes(c.provenance);
-    case "secret":
-      return bytes(c.secret);
+    case "close_slot":
+      return c.closeSlot ? int(c.closeSlot) : "0 (open)";
     case "entropy":
       return bytes(c.entropy);
     case "generator_hash":

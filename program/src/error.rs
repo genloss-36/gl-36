@@ -10,8 +10,8 @@ pub enum Error {
     PriceAboveMax = 5,
     SellerMismatch = 6,
     SelfBuy = 7,
-    BadSecret = 8,
-    AlreadyRevealed = 9,
+    NotClosed = 8,
+    AlreadySettled = 9,
     MintClosed = 10,
     BadFee = 11,
     BadSupply = 12,
@@ -20,6 +20,7 @@ pub enum Error {
     BadId = 15,
     SameOwner = 16,
     BadSysvar = 17,
+    TooEarly = 18,
 }
 
 impl From<Error> for ProgramError {

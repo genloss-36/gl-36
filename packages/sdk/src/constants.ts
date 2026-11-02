@@ -22,8 +22,10 @@ export const MAX_SUPPLY = 0xffff;
 export const MAX_MINT_BATCH = 10;
 export const MAX_FEE_BPS = 1_000;
 
-export const FLAG_REVEALED = 1;
+export const FLAG_SETTLED = 1;
 export const FLAG_CLOSED = 2;
+
+export const SETTLE_DELAY = 32n;
 
 export const HEADER_OFFSET = {
   tag: 0,
@@ -37,8 +39,7 @@ export const HEADER_OFFSET = {
   mintPrice: 16,
   creator: 24,
   treasury: 56,
-  provenance: 88,
-  secret: 120,
+  closeSlot: 88,
   entropy: 152,
   generatorHash: 184,
 } as const;

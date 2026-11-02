@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { findCollection, initIx } from "@gl-36/sdk";
 import { PUBLIC_RPC, RPC_URL, balance, call, collectionState, loadKey, root, rpc, send, sol, systemTransfer } from "@gl-36/cluster";
@@ -6,12 +6,6 @@ import { PUBLIC_RPC, RPC_URL, balance, call, collectionState, loadKey, root, rpc
 const PROJECT = "genloss";
 const generatorHash = createHash("sha256").update(readFileSync(new URL("../generator/genloss-gen.js", import.meta.url))).digest();
 const nonceFor = (base: number) => (base ^ generatorHash.readUInt32LE(0)) >>> 0;
-
-function secretFor(name: string) {
-  const p = root(`.keys/${name}.secret`);
-  if (!existsSync(p)) writeFileSync(p, randomBytes(32).toString("hex") + "\n", { mode: 0o600 });
-  return Buffer.from(readFileSync(p, "utf8").trim(), "hex");
-}
 
 const GENESIS = { name: "genesis", title: "Genesis", nonce: nonceFor(0x47454e31), maxSupply: 5000, mintPrice: 10_000_000n, feeBps: 200 };
 
@@ -22,11 +16,10 @@ async function main() {
 
   const s = GENESIS;
   const [address] = await findCollection(programId, creator.address, s.nonce);
-  const provenance = createHash("sha256").update(secretFor(s.name)).digest();
   if (!(await collectionState(address))) {
     await send(`${s.name}: init`, creator, [
       initIx(programId, creator, address, treasury.address, {
-        nonce: s.nonce, maxSupply: s.maxSupply, feeBps: s.feeBps, mintPrice: s.mintPrice, provenance, generatorHash,
+        nonce: s.nonce, maxSupply: s.maxSupply, feeBps: s.feeBps, mintPrice: s.mintPrice, generatorHash,
       }),
     ]);
   }

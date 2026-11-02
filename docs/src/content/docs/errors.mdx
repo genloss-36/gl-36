@@ -14,16 +14,17 @@ GL-36 returns `ProgramError::Custom(code)` for its own conditions. In transactio
 | 5 | `0x5` | `PriceAboveMax` | The ask is higher than the buyer's `max_price`. |
 | 6 | `0x6` | `SellerMismatch` | The seller passed to `buy` no longer owns the slot. |
 | 7 | `0x7` | `SelfBuy` | Buyer and seller are the same address. |
-| 8 | `0x8` | `BadSecret` | `sha256(secret)` doesn't match `provenance`. |
-| 9 | `0x9` | `AlreadyRevealed` | `reveal` on a revealed collection. |
-| 10 | `0xa` | `MintClosed` | `mint` after the mint closed. |
+| 8 | `0x8` | `NotClosed` | `settle` while the mint is still open. |
+| 9 | `0x9` | `AlreadySettled` | `settle` on a settled collection. |
+| 10 | `0xa` | `MintClosed` | `mint` or `close` after the mint closed. |
 | 11 | `0xb` | `BadFee` | `fee_bps` above 1,000 at `init`. |
 | 12 | `0xc` | `BadSupply` | `max_supply` of 0 at `init`. |
 | 13 | `0xd` | `WrongCreator` | The creator account doesn't match the header. |
 | 14 | `0xe` | `WrongTreasury` | The treasury account doesn't match the header. |
 | 15 | `0xf` | `BadId` | `id` is not below `minted`. |
 | 16 | `0x10` | `SameOwner` | `transfer` to the current owner. |
-| 17 | `0x11` | `BadSysvar` | The SlotHashes account is wrong or empty. |
+| 17 | `0x11` | `BadSysvar` | The SlotHashes account passed to `settle` is wrong. |
+| 18 | `0x12` | `TooEarly` | `settle` before slot `close_slot + 32` has passed. |
 
 ## Built-in errors
 
@@ -36,5 +37,6 @@ GL-36 returns `ProgramError::Custom(code)` for its own conditions. In transactio
 | `Immutable` | The collection account wasn't passed as writable. |
 | `InvalidAccountData` | Wrong tag or version, or the length doesn't match `minted`. |
 | `InvalidSeeds` | `init` with an address that isn't the creator's PDA for the nonce. |
+| `ArithmeticOverflow` | `mint_price × count` doesn't fit in a u64. |
 
 Insufficient funds surface as System Program errors from the transfer CPIs inside `init`, `mint` and `buy`.
