@@ -16,6 +16,35 @@ type EventsFeature = { "standard:events": { on(event: "change", cb: (p: { accoun
 
 const LAST_KEY = "genloss.wallet";
 
+export const MWA_NAME = "Mobile Wallet Adapter";
+
+export const WALLET_APPS = [
+  { name: "Phantom", browse: "https://phantom.com/ul/browse/", install: "https://phantom.com/download" },
+  { name: "Solflare", browse: "https://solflare.com/ul/v1/browse/", install: "https://solflare.com/download/" },
+  { name: "Backpack", browse: "https://backpack.app/ul/v1/browse/", install: "https://backpack.app/download" },
+] as const;
+
+export type WalletApp = (typeof WALLET_APPS)[number];
+
+export const isMobile = () =>
+  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+export const browseIn = (app: WalletApp) =>
+  `${app.browse}${encodeURIComponent(location.href)}?ref=${encodeURIComponent(location.origin)}`;
+
+let mwa = false;
+
+export async function registerMobile() {
+  if (mwa || !/android/i.test(navigator.userAgent)) return;
+  mwa = true;
+  const { registerMwa } = await import("@solana-mobile/wallet-standard-mobile");
+  registerMwa({
+    appIdentity: { name: "GENLOSS", uri: `${location.origin}/`, icon: "apple-touch-icon.png" },
+    chains: [CHAIN],
+    onWalletNotFound: async () => {},
+  });
+}
+
 export function solanaWallets(): Wallet[] {
   return getWallets()
     .get()

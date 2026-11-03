@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useStore } from "@nanostores/react";
 import type { Lang } from "../i18n/strings";
 import { startPolling } from "../lib/chain";
-import { onWalletsChanged, restore } from "../lib/wallet";
+import { onWalletsChanged, registerMobile, restore } from "../lib/wallet";
 import { $sound, $toasts } from "../lib/store";
 import { engine } from "../audio/engine";
 import { useT } from "./ui";
@@ -16,7 +16,9 @@ export default function Runtime({ lang }: { lang: Lang }) {
   useEffect(() => {
     startPolling();
     restore();
-    return onWalletsChanged(() => restore());
+    const off = onWalletsChanged(() => restore());
+    registerMobile().catch(() => {});
+    return off;
   }, []);
 
   useEffect(() => {

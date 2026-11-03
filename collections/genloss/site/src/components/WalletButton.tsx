@@ -3,7 +3,7 @@ import { useStore } from "@nanostores/react";
 import type { Wallet } from "@wallet-standard/base";
 import type { Lang } from "../i18n/strings";
 import { $balance, $wallet, toast } from "../lib/store";
-import { connectStandard, disconnect, onWalletsChanged, solanaWallets } from "../lib/wallet";
+import { MWA_NAME, WALLET_APPS, browseIn, connectStandard, disconnect, isMobile, onWalletsChanged, solanaWallets } from "../lib/wallet";
 import { explain } from "../lib/tx";
 import { short, sol } from "../lib/format";
 import { useT } from "./ui";
@@ -16,11 +16,15 @@ export default function WalletButton({ lang }: { lang: Lang }) {
   const balance = useStore($balance);
   const [open, setOpen] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [mobile, setMobile] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const label = (name: string) => (name === MWA_NAME ? tr("wallet.mwa") : name);
+  const injected = wallets.filter((w) => w.name !== MWA_NAME);
 
   useEffect(() => {
     const update = () => setWallets(solanaWallets());
     update();
+    setMobile(isMobile());
     const off = onWalletsChanged(update);
     const openMenu = () => { setOpen(true); box.current?.scrollIntoView({ block: "nearest" }); };
     window.addEventListener("genloss:connect", openMenu);
@@ -56,7 +60,7 @@ export default function WalletButton({ lang }: { lang: Lang }) {
           {wallet ? (
             <>
               <p>
-                {wallet.name}
+                {label(wallet.name)}
                 {balance !== null && <><br /><span style={{ color: "var(--ink)", fontSize: 17 }}>{sol(balance, 4)} SOL</span></>}
               </p>
               <button onClick={() => { navigator.clipboard.writeText(wallet.address); toast("ok", tr("wallet.copied")); setOpen(false); }}>{tr("wallet.copy")}</button>
@@ -65,14 +69,33 @@ export default function WalletButton({ lang }: { lang: Lang }) {
             </>
           ) : (
             <>
-              <p>{tr("wallet.choose")}</p>
+              {wallets.length > 0 && <p>{tr("wallet.choose")}</p>}
               {wallets.map((w) => (
                 <button key={w.name} onClick={() => choose(() => connectStandard(w))}>
                   <img src={w.icon} alt="" width={22} height={22} />
-                  {w.name}
+                  {label(w.name)}
                 </button>
               ))}
-              {!wallets.length && <p>{tr("wallet.none")}</p>}
+              {mobile && !injected.length && (
+                <>
+                  {wallets.length > 0 && <hr />}
+                  <p>{tr("wallet.openIn")}</p>
+                  {WALLET_APPS.map((app) => (
+                    <a key={app.name} href={browseIn(app)}>{app.name}</a>
+                  ))}
+                </>
+              )}
+              {!mobile && !wallets.length && (
+                <>
+                  <p>{tr("wallet.none")}</p>
+                  {WALLET_APPS.map((app) => (
+                    <a key={app.name} href={app.install} target="_blank" rel="noreferrer">
+                      {app.name}
+                      <small>{new URL(app.install).host}</small>
+                    </a>
+                  ))}
+                </>
+              )}
             </>
           )}
         </div>

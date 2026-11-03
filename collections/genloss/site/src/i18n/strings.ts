@@ -15,7 +15,9 @@ const en = {
 
   "wallet.connect": "Connect",
   "wallet.choose": "Choose a wallet",
-  "wallet.none": "No Solana wallet found. Install Phantom, Solflare or Backpack, then reload the page.",
+  "wallet.none": "No Solana wallet found. Install one, then reload the page.",
+  "wallet.openIn": "Open this page in a wallet app",
+  "wallet.mwa": "Wallet app on this phone",
   "wallet.copy": "Copy address",
   "wallet.copied": "Address copied",
   "wallet.disconnect": "Disconnect",
@@ -161,6 +163,7 @@ const en = {
   "err.rate": "The public RPC is busy. Wait a few seconds or set your own in Network settings.",
   "err.timeout": "Not confirmed after 60 seconds. It may still land, so check the explorer.",
   "err.connect": "Connect a wallet first.",
+  "err.noWalletApp": "No wallet app on this phone answered. Open the page in one of the wallets below.",
   "err.generic": "Something went wrong. Try again.",
 };
 
@@ -181,7 +184,9 @@ const zh: Record<Key, string> = {
 
   "wallet.connect": "连接钱包",
   "wallet.choose": "选择钱包",
-  "wallet.none": "未找到 Solana 钱包。请安装 Phantom、Solflare 或 Backpack 后刷新页面。",
+  "wallet.none": "未找到 Solana 钱包。请先安装，然后刷新页面。",
+  "wallet.openIn": "在钱包应用中打开此页面",
+  "wallet.mwa": "本机钱包应用",
   "wallet.copy": "复制地址",
   "wallet.copied": "地址已复制",
   "wallet.disconnect": "断开连接",
@@ -327,6 +332,7 @@ const zh: Record<Key, string> = {
   "err.rate": "公共 RPC 繁忙。请稍候，或在网络设置中填写自己的节点。",
   "err.timeout": "60 秒内未确认，交易可能仍会上链，请在区块浏览器中查看。",
   "err.connect": "请先连接钱包。",
+  "err.noWalletApp": "本机没有钱包应用响应。请在下方的钱包应用中打开此页面。",
   "err.generic": "出现问题，请重试。",
 };
 

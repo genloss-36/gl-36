@@ -306,8 +306,9 @@ img, canvas, svg { display: block; }
   transform-origin: top right;
   animation: deblock 220ms steps(4, end);
 }
-.menu button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; background: transparent; cursor: pointer; text-align: left; font-size: 15px; }
-.menu button:hover { background: #1a1a1a; }
+.menu button, .menu a { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; background: transparent; cursor: pointer; text-align: left; font-size: 15px; }
+.menu button:hover, .menu a:hover { background: #1a1a1a; }
+.menu a small { margin-left: auto; }
 .menu img { width: 22px; height: 22px; }
 .menu p { margin: 8px 12px 10px; font-size: 13px; color: var(--ink-2); }
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 8px; }

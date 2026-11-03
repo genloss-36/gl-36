@@ -60,6 +60,7 @@ export function explain(e: unknown, lang: Lang): string {
     const n = parseInt(code[1], 16);
     return PROGRAM_ERRORS[n] ? t(lang, PROGRAM_ERRORS[n]) : t(lang, "err.program", { code: n });
   }
+  if (/ERROR_WALLET_NOT_FOUND|no installed wallet/i.test(raw)) return t(lang, "err.noWalletApp");
   if (/rejected|denied|cancel/i.test(raw)) return t(lang, "err.cancelled");
   if (/insufficient (lamports|funds)|no record of a prior credit|InsufficientFundsForRent/i.test(raw)) return t(lang, "err.funds");
   if (/429|Too Many Requests/i.test(raw)) return t(lang, "err.rate");
