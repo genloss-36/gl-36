@@ -96,12 +96,8 @@ void main() {
 
 const PRESENT = `${HEAD}
 uniform sampler2D uIn;
-uniform vec2 uSplit;
 void main() {
-  float r = texture(uIn, vUv + uSplit).r;
-  vec2 gb = texture(uIn, vUv).gb;
-  float b = texture(uIn, vUv - uSplit).b;
-  o = vec4(r, gb.x, b, 1.0);
+  o = vec4(texture(uIn, vUv).rgb, 1.0);
 }`;
 
 const Q_LUMA = [
@@ -304,13 +300,7 @@ export class LiveLoss {
   frame(inp: LossInput, restore = 0.012) {
     this.save(inp, restore);
     this.saves++;
-    const gl = this.gl;
-    const speed = Math.hypot(inp.vel[0], inp.vel[1]);
-    this.pass("PRESENT", null, (u) => {
-      this.bind(u.uIn, 0, this.rgb[this.flip]);
-      const s = Math.min(0.012, speed * 0.6);
-      gl.uniform2f(u.uSplit, s, 0);
-    });
+    this.pass("PRESENT", null, (u) => this.bind(u.uIn, 0, this.rgb[this.flip]));
   }
 
   destroy() {
