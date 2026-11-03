@@ -1,5 +1,6 @@
 ---
 import Mark from "./Mark.astro";
+import { X } from "../lib/config";
 
 interface Props {
   current?: "home" | "docs" | "reference" | "inspector";
@@ -37,6 +38,11 @@ const links = [
         <span class="t">Search</span>
         <kbd data-kbd aria-hidden="true">⌘K</kbd>
       </button>
+      <a class="icon press" href={X.url} target="_blank" rel="noopener" aria-label={`GL-36 on X, @${X.handle}`}>
+        <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+        </svg>
+      </a>
       <button class="icon press" type="button" data-theme-toggle aria-label="Switch to light theme">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>

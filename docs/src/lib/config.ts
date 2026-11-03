@@ -33,5 +33,7 @@ export const FEATURED: KnownCollection | undefined =
 
 export const explorerAddress = (a: string) => `https://solscan.io/account/${a}`;
 
+export const X = { handle: "gl36protocol", url: "https://x.com/gl36protocol" } as const;
+
 export const RENT = { now: 5_080, afterCuts: 696 } as const;
 export const ACCOUNT_OVERHEAD = 128;

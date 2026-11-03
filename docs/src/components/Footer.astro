@@ -1,6 +1,6 @@
 ---
 import Mark from "./Mark.astro";
-import { PROGRAM_ID, explorerAddress } from "../lib/config";
+import { PROGRAM_ID, X, explorerAddress } from "../lib/config";
 import { short } from "../lib/format";
 
 const cols = [
@@ -53,9 +53,12 @@ const cols = [
   <div class="base">
     <div class="wide row">
       <span class="brand"><Mark size={16} /><span><span translate="no">GL-36</span>, an NFT standard for Solana</span></span>
-      <a class="prog" href={explorerAddress(PROGRAM_ID)} rel="noopener" target="_blank">
-        Program on mainnet: <span class="mono" translate="no">{short(PROGRAM_ID, 6)}</span>
-      </a>
+      <span class="meta">
+        <a href={X.url} rel="noopener" target="_blank">X <span translate="no">@{X.handle}</span></a>
+        <a href={explorerAddress(PROGRAM_ID)} rel="noopener" target="_blank">
+          Program on mainnet: <span class="mono" translate="no">{short(PROGRAM_ID, 6)}</span>
+        </a>
+      </span>
     </div>
   </div>
 </footer>
@@ -113,11 +116,17 @@ const cols = [
     align-items: center;
     gap: 10px;
   }
-  .prog {
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
     font-size: 13px;
-    color: var(--inv-fg-2);
   }
-  .prog:hover {
+  .meta a {
+    color: var(--inv-fg-2);
+    transition: color 0.2s var(--ease);
+  }
+  .meta a:hover {
     color: var(--inv-fg);
   }
   @media (max-width: 900px) {

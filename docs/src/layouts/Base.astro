@@ -5,6 +5,7 @@ import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import Search from "../components/Search.astro";
+import { X } from "../lib/config";
 
 interface Props {
   title?: string;
@@ -30,6 +31,7 @@ const ld = [
     description: "An NFT standard for Solana where a token takes 36 bytes.",
     url: abs("/"),
     inLanguage: "en",
+    sameAs: [X.url],
   },
   ...schema.map((s) => ({ "@context": "https://schema.org", ...s })),
 ];
@@ -61,6 +63,7 @@ const ld = [
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={imageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={`@${X.handle}`} />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={image} />
