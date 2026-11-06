@@ -15,10 +15,10 @@ import {
   type Signature,
   type TransactionSigner,
 } from "@solana/kit";
-import { ERR } from "@gl-36/sdk";
+import { ERR, parseLogs } from "@gl-36/sdk";
 import { t, type Key, type Lang } from "../i18n/strings";
 import { refresh, rpc } from "./chain";
-import { explorerTx } from "./config";
+import { CONFIG, explorerTx } from "./config";
 import { $wallet, toast } from "./store";
 import { submitWire } from "./wallet";
 
@@ -108,6 +108,19 @@ export async function run(lang: Lang, action: Key, build: (me: TransactionSigner
     }
   }
   throw new TxError("err.timeout");
+}
+
+export async function mintedRange(sig: string): Promise<{ firstId: number; count: number } | null> {
+  for (let i = 0; i < 6; i++) {
+    const tx = await rpc().getTransaction(sig as Signature, { encoding: "json", maxSupportedTransactionVersion: 0, commitment: "confirmed" }).send();
+    const logs = tx?.meta?.logMessages;
+    if (logs) {
+      const ev = parseLogs(logs, address(CONFIG.programId)).find((e) => e.type === "mint");
+      return ev?.type === "mint" ? { firstId: ev.firstId, count: ev.count } : null;
+    }
+    await sleep(700);
+  }
+  return null;
 }
 
 export async function attempt(lang: Lang, action: Key, build: (me: TransactionSigner) => Instruction[]) {

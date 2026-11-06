@@ -5,7 +5,7 @@ import type { Lang } from "../i18n/strings";
 import { COLLECTIONS, CONFIG } from "../lib/config";
 import { $chain, $chainError, $collectionId, $wallet } from "../lib/store";
 import { asAddress, lamportsPerByte } from "../lib/chain";
-import { attempt } from "../lib/tx";
+import { attempt, mintedRange } from "../lib/tx";
 import { pad, sol } from "../lib/format";
 import { openConnect } from "./WalletButton";
 import { useT } from "./ui";
@@ -59,7 +59,11 @@ export default function MintPanel({ lang }: { lang: Lang }) {
     const first = col.minted;
     const cfg = COLLECTIONS.find((c) => c.id === chain.cfgId)!;
     const sig = await attempt(lang, "toast.mint", (me) => [mintIx(asAddress(CONFIG.programId), me, asAddress(cfg.address), col.creator, qty)]);
-    if (sig) setDone(qty === 1 ? pad(first) : `${pad(first)}–${pad(first + qty - 1)}`);
+    if (sig) {
+      const range = await mintedRange(sig).catch(() => null);
+      const a = range?.firstId ?? first, k = range?.count ?? qty;
+      setDone(k === 1 ? pad(a) : `${pad(a)}–${pad(a + k - 1)}`);
+    }
     setBusy(false);
   };
 
