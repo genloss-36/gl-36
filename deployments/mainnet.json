@@ -9,5 +9,14 @@
       "generatorHash": "c8f64b27854f00678a537f5bcada9b602691f46cf4fbe630a37c045d4ba02c6c"
     }
   },
-  "collections": []
+  "collections": [
+    {
+      "id": "genesis",
+      "project": "genloss",
+      "title": "Genesis",
+      "address": "4taSuzkuc2JKXKTFAHWYh622JsAeCx6HVGggUXHaiYKJ",
+      "maxSupply": 5000,
+      "mintPrice": "10000000"
+    }
+  ]
 }
