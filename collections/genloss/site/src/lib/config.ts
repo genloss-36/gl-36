@@ -15,6 +15,7 @@ export const PROJECT = "genloss";
 export const COLLECTIONS: CollectionCfg[] = (CONFIG.collections as CollectionCfg[]).filter((c) => c.project === PROJECT);
 
 export const DOCS_URL = "https://gl36.org";
+export const X = { handle: "gl36protocol", url: "https://x.com/gl36protocol" } as const;
 export const CHAIN = "solana:mainnet";
 
 const RPC_KEY = "genloss.rpc";

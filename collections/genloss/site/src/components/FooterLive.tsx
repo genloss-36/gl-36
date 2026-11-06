@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
 import type { Lang } from "../i18n/strings";
-import { CONFIG, DOCS_URL, explorerAddress, rpcUrl, setRpcUrl } from "../lib/config";
+import { CONFIG, DOCS_URL, X, explorerAddress, rpcUrl, setRpcUrl } from "../lib/config";
 import { generatorHash, loadGen } from "../lib/generator";
 import { $chain, collectionCfg } from "../lib/store";
 import { short } from "../lib/format";
@@ -37,6 +37,7 @@ export default function FooterLive({ lang }: { lang: Lang }) {
         <span>{tr("foot.program")} <a className="mono" href={explorerAddress(CONFIG.programId)} target="_blank" rel="noreferrer">{short(CONFIG.programId, 6)}</a></span>
         {col && <span>{tr("foot.collection")} <a className="mono" href={explorerAddress(col.address)} target="_blank" rel="noreferrer">{short(col.address, 6)}</a></span>}
         <span><a href={DOCS_URL}>{tr("foot.docs")}</a></span>
+        <span><a href={X.url} target="_blank" rel="noreferrer">X <span translate="no">@{X.handle}</span></a></span>
       </div>
       <details>
         <summary>{tr("foot.network")}</summary>

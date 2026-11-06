@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { t, type Lang, type Key } from "../i18n/strings";
-import { DOCS_URL } from "../lib/config";
+import { DOCS_URL, X } from "../lib/config";
 import Mark from "./Mark.tsx";
 import SoundToggle from "./SoundToggle.tsx";
 import WalletButton from "./WalletButton.tsx";
@@ -40,6 +40,11 @@ const facts: { t: Key; d: Key }[] = [
       </nav>
       <div class="end">
         <a class="lang" href={other} hreflang={lang === "zh" ? "en" : "zh-CN"}>{t(lang, "nav.lang")}</a>
+        <a class="xlink" href={X.url} target="_blank" rel="noopener" aria-label={`X @${X.handle}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+          </svg>
+        </a>
         <SoundToggle client:only="react" lang={lang} />
         <WalletButton client:only="react" lang={lang} />
       </div>

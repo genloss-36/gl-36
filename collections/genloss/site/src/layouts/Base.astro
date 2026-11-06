@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import archivo from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
 import { t, type Lang } from "../i18n/strings";
+import { X } from "../lib/config";
 
 interface Props {
   lang: Lang;
@@ -44,6 +45,7 @@ const image = abs(`${base}${lang === "zh" ? "og-zh.png" : "og.png"}`);
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={t(lang, "meta.ogAlt")} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={`@${X.handle}`} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={image} />
